@@ -15,7 +15,7 @@ var R3 = (function () {
                 0,0,0,1
             ];
         } else if (values.length != D4 * D4) {
-            throw "Wrong number of vales for matrix initialization.";
+            throw "Wrong number of values for matrix initialization.";
         }
         this.m = new Float32Array(values);
     }
