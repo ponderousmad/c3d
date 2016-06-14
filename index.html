@@ -13,7 +13,8 @@
         <script type="text/javascript" src="src/r3.js"></script>
         <script type="text/javascript" src="src/webgl-debug.js"></script>
         <script type="text/javascript" src="src/wgl.js"></script>
-        <script type="text/javascript" src="src/main.js"></script>  
+        <script type="text/javascript" src="src/main.js"></script>
+        <script type="text/javascript" src="src/c3d.js"></script>
     </head>
     <body>
         <div>
@@ -23,12 +24,6 @@
             </canvas>
             </span>
         </div>
-        <script type="text/javascript">
-            window.onload = function(e) {
-                MAIN.runTestSuites();
-                MAIN.start(document.getElementById("canvas3D"), new MAIN.Test3D());
-            };
-        </script>
         <script id="vertex-test" type="x-shader/x-vertex">
             attribute vec3 aPos;
             attribute vec2 aUV;
