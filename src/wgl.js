@@ -197,7 +197,6 @@ var WGL = (function () {
                 ];
             this.testSetup.square = this.setupBuffer(vertices);
             this.testSetup.squareUVs = this.setupBuffer(uvs);
-            this.gl.disable(this.gl.CULL_FACE);
             
             this.testSetup.batch = new BLIT.Batch("images/");
             this.testSetup.squareTexture = this.loadTexture(this.testSetup.batch, "uv.png");
