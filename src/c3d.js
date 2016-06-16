@@ -6,6 +6,7 @@ var C3D = (function () {
         this.maximize = true;
         this.updateInDraw = false;
         this.updateInterval = 16;
+        this.processed = null;
     }
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
@@ -20,6 +21,8 @@ var C3D = (function () {
     View.prototype.loadImage = function (event) {
         var image = new Image();
         image.src = event.target.result;
+        
+        this.processed = IMPROC.processImage(image);
     };
     
     window.onload = function(e) {

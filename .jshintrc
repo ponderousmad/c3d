@@ -12,6 +12,7 @@
         "R3"        : true,
         "WGL"       : true,
         "WebGLDebugUtils" : true,
+        "IMPROC"    : true,
         "TEST"      : true
     } 
 }
