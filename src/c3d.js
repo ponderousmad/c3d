@@ -23,6 +23,14 @@ var C3D = (function () {
         image.src = event.target.result;
         
         this.processed = IMPROC.processImage(image);
+        this.processed.cleanDepths = IMPROC.mipmapImputer(
+            this.processed.depths, this.processed.width, this.processed.height, IMPROC.strategies.avg
+        );
+        var cleanSize = IMPROC.nextPowerOfTwo(Math.max(this.processed.height, this.processed.width));
+        this.processed.image.width = cleanSize;
+        this.processed.image.height = cleanSize;
+        this.processed.uMax = cleanSize / this.processed.width;
+        this.processed.vMax = cleanSize / this.processed.height;
     };
     
     window.onload = function(e) {
