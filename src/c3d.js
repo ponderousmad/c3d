@@ -78,6 +78,7 @@ var C3D = (function () {
         
         this.mesh = this.constructGrid(scene);
         this.mesh.image = canvas;
+        this.angle = 0;
     };
     
     View.prototype.constructGrid = function (scene) {
