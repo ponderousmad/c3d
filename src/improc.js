@@ -18,19 +18,17 @@ var IMPROC = (function () {
         return true;
     }
     
-    function decodeDepth(pixels, width, height, heightOffset) {
+    function decodeDepth(pixels, width, height) {
         var BYTE_MAX = 255,
-            CHANNEL_MAX = 8.0,
+            CHANNEL_MAX = 8,
             MAX_RED_VALUE = BYTE_MAX - CHANNEL_MAX,
             CHANNELS_MAX = CHANNEL_MAX * CHANNEL_MAX,
-            DEPTH_START_INDEX = heightOffset * width * CHANNELS,
             orientation = [1, 0, 0, 0],
             depths = [],
-            skip = 0,
-            i = DEPTH_START_INDEX;
+            skip = 0;
 
-        if (pixelsEqual(pixelAt(pixels, DEPTH_START_INDEX), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, DEPTH_START_INDEX + CHANNELS);
+        if (pixelsEqual(pixelAt(pixels, 0), [BYTE_MAX, 0, 0, BYTE_MAX])) {
+            var pixel = pixelAt(pixels, CHANNELS);
             for (var o = 0; o < orientation.length; ++o) {
                 orientation[o] = ((2.0 * pixel[o]) / BYTE_MAX) - 1;
             }
@@ -39,6 +37,7 @@ var IMPROC = (function () {
         }
         for (var y = 0; y < height; ++y) {
             for (var x = 0; x < width; ++x) {
+                var i = (y * width + x) * CHANNELS;
                 var r = pixels[i + R],
                     g = pixels[i + G],
                     b = pixels[i + B];
@@ -46,9 +45,10 @@ var IMPROC = (function () {
                     depths.push(null);
                     skip -= 1;
                 } else {
-                    depths.push(((MAX_RED_VALUE - r) * CHANNELS_MAX) + ((g - r) * CHANNEL_MAX) + (b - r));
+                    var baseDepth = (MAX_RED_VALUE - r) * CHANNELS_MAX,
+                        offset = (g - r) * CHANNEL_MAX + (b - r);
+                    depths.push(baseDepth + offset);
                 }
-                i += CHANNELS;
             }
         }
         return { depths: depths, width: width, height: height, attitude: orientation };
@@ -60,16 +60,17 @@ var IMPROC = (function () {
             height = image.height / 2;
 
         canvas.width = image.width;
-        canvas.height = image.height;
-        context.clearRect(0, 0, image.width + 2, image.height + 2);
-        context.drawImage(image, 0, 0);
+        canvas.height = height;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        
+        context.drawImage(image, 0, height, image.width, height, 0, 0, image.width, height);
             
         var buffer = context.getImageData(0, 0, image.width, image.height),
             data = buffer.data,
             result = decodeDepth(data, image.width, height, height);
         
-        canvas.height = height;
-        result.image = canvas;
+        result.width = image.width;
+        result.height = height;
         
         return result;
     }
@@ -113,11 +114,13 @@ var IMPROC = (function () {
                     var offset = ((y * scale[1]) + sy) * totalWidth + (x * scale[0]);
                     for (var sx = 0; sx < scale[0]; ++sx) {
                         var v = values[offset + sx];
-                        count += 1;
-                        if (value === null) {
-                            value = v;
-                        } else {
-                            value = strategy(v, count, value);
+                        if (v !== null) {
+                            count += 1;
+                            if (value === null) {
+                                value = v;
+                            } else {
+                                value = strategy(v, count, value);
+                            }
                         }
                     }
                 }
@@ -167,7 +170,7 @@ var IMPROC = (function () {
             var scale = scales[s];
             w = w / scale[0];
             h = h / scale[1];
-                
+
             mipmaps.push(reduceImage(mipmaps[mipmaps.length - 1], w, h, scale, strategy));
         }
         
