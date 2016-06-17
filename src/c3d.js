@@ -10,11 +10,13 @@ var C3D = (function () {
         this.program = null;
         this.angle = 0;
         this.direction = 1;
-        this.maxAngle = Math.PI / 4;
+        this.maxAngle = Math.PI / 40;
+        this.distance = 8000;
+        this.iPadMiniBackCameraFOV = 28;
     }
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        this.angle += elapsed * 0.0002 * this.direction;
+        this.angle += elapsed * 0.00002 * this.direction;
         if (Math.abs(this.angle) > this.maxAngle) {
             this.angle = this.direction * this.maxAngle;
             this.direction = -this.direction;
@@ -33,9 +35,9 @@ var C3D = (function () {
                 vertexUV: room.bindVertexAttribute(shader, "aUV"),
                 textureVariable: "uSampler"
             };
-            room.viewer.far = 20000;
-            room.viewer.position.set(0, 0, 1000);
-            room.viewer.fov = 45;
+            room.viewer.far = 100000;
+            room.viewer.position.set(0, 0, this.distance);
+            room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.disable(room.gl.CULL_FACE);
         }
         
@@ -88,8 +90,8 @@ var C3D = (function () {
             width = scene.width,
             xOffset = - width / 2,
             yOffset = height / 2,
-            depthScale = 0.5,
-            depthOffset = 1000,
+            depthScale = 1,
+            depthOffset = this.distance,
             uScale = scene.uMax / scene.width,
             vScale = scene.vMax / height,
             xStride = 4,
@@ -97,19 +99,26 @@ var C3D = (function () {
             widthSteps = width / xStride,
             halfWidth = width / 2,
             halfHeight = height / 2,
-            MAX_FROM_CENTER = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight);
+            MAX_FROM_CENTER = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight),
+            halfFOV = (this.iPadMiniBackCameraFOV / 2) * Math.PI / 180,
+            planeDistance = (scene.width / 2) / Math.tan(halfFOV);
 
         for (var y = 0; y <= height; y += yStride) {
             var generateTris = y < height;
             for (var x = 0; x <= width; x += xStride) {
 				var depth = scene.cleanDepths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)];
-				vertices.push(xOffset + x);
-                vertices.push(yOffset - y);
-                vertices.push(depthOffset - depth * depthScale);
+                var pixel = R3.newPoint(xOffset + x, yOffset - y, -planeDistance);
+                pixel.normalize();
                 
-				normals.push(0);
-                normals.push(0);
-                normals.push(1);
+				normals.push(pixel.x);
+                normals.push(pixel.y);
+                normals.push(pixel.x);
+                
+                pixel.scale(depth * depthScale);
+				vertices.push(pixel.x);
+                vertices.push(pixel.y);
+                vertices.push(pixel.z + depthOffset);
+
                 uvs.push(x * uScale);
                 uvs.push(y * vScale);
 
