@@ -132,7 +132,7 @@ var R3 = (function () {
         this.x = x || 0;
         this.y = y || 0;
         this.z = z || 0;
-        this.w = w === undefined ? 1 : 0;
+        this.w = w === undefined ? 1 : w;
     }
     
     V.prototype.copy = function () {
@@ -230,8 +230,8 @@ var R3 = (function () {
             f = Math.tan((Math.PI - fieldOfView) / 2);
 
         return new M([
-            f / aspectRatio, 0, 0, 0,
-            0, f, 0, 0,
+            f, 0, 0, 0,
+            0, f * aspectRatio, 0, 0,
             0, 0, (near + far) * scale, -1,
             0, 0, near * far * scale * 2, 0
         ]);
@@ -240,6 +240,60 @@ var R3 = (function () {
         
     function testSuite() {
         var vectorTests = [
+            function testConstruct() {
+                var v = new V();
+
+                TEST.equals(v.x, 0);
+                TEST.equals(v.y, 0);
+                TEST.equals(v.z, 0);
+                TEST.equals(v.w, 1);
+                
+                var ones = new V(1,1,1);
+                
+                TEST.equals(ones.x, 1);
+                TEST.equals(ones.y, 1);
+                TEST.equals(ones.z, 1);
+                TEST.equals(ones.w, 1);
+            },
+            
+            function testLength() {
+                var v = new V(3, 4, 12);
+                TEST.tolEquals(v.lengthSq(), 13 * 13);
+                TEST.tolEquals(v.length(), 13);
+            },
+            
+            function testNormalize() {
+                var v = new V(1, 0, 0);
+                
+                v.normalize();
+                
+                TEST.equals(v.x, 1);
+                TEST.equals(v.y, 0);
+                TEST.equals(v.z, 0);
+                TEST.equals(v.w, 1);
+                
+                var a = new V(1, 1, 1),
+                    n = a.normalized();
+                
+                TEST.equals(a.x, 1);
+                TEST.equals(a.y, 1);
+                TEST.equals(a.z, 1);
+                TEST.equals(a.w, 1);
+                
+                TEST.tolEquals(n.x, 1 / Math.sqrt(3));
+                TEST.tolEquals(n.y, 1 / Math.sqrt(3));
+                TEST.tolEquals(n.z, 1 / Math.sqrt(3));
+                TEST.tolEquals(n.w, 1);
+            },
+            
+            function testScale() {
+                var v = new V(1, -2, 0);
+                v.scale(-2);
+                TEST.equals(v.x, -2);
+                TEST.equals(v.y, 4);
+                TEST.equals(v.z, 0);
+                TEST.equals(v.w, 1);
+            }
         ];
         
         var matrixTests = [  
@@ -252,6 +306,7 @@ var R3 = (function () {
     return {
         M: M,
         V: V,
+        newPoint: function (x, y, z) { return new V(x, y, z, 0); },
         identity: function () { return new M(); },
         origin: function () { return new V(); },
         toOrigin: function (v) { var o = new V(); o.sub(v); return o; },
