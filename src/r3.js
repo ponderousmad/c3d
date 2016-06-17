@@ -52,6 +52,42 @@ var R3 = (function () {
         this.m[at(2,2)] *= v.z;
     };
     
+    function makeRotateX(theta) {
+        var c = Math.cos(theta),
+            s = Math.sin(theta);
+        
+        return new M([
+            1, 0, 0, 0,
+            0, c,-s, 0,
+            0, s, c, 0,
+            0, 0, 0, 1
+        ]);
+    }
+    
+    function makeRotateY(theta) {
+        var c = Math.cos(theta),
+            s = Math.sin(theta);
+        
+        return new M([
+            c, 0, s, 0,
+            0, 1, 0, 0,
+           -s, 0, c, 0,
+            0, 0, 0, 1
+        ]);
+    }
+    
+    function makeRotateZ(theta) {
+        var c = Math.cos(theta),
+            s = Math.sin(theta);
+        
+        return new M([
+            c,-s, 0, 0,
+            s, c, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        ]);
+    }
+    
     function matmul(a, b, target) {
         var result = null;
         if (target && target != a && target != b) {
@@ -72,7 +108,7 @@ var R3 = (function () {
             }
         }
         
-        if (target !== null) {
+        if (target) {
             target.m = result.m;
             return target;
         }
@@ -190,11 +226,12 @@ var R3 = (function () {
     }
     
     function perspective(fieldOfView, aspectRatio, near, far) {
-        var scale = 1.0 / (near - far);
+        var scale = 1.0 / (near - far),
+            f = Math.tan((Math.PI - fieldOfView) / 2);
 
         return new M([
-            fieldOfView / aspectRatio, 0, 0, 0,
-            0, fieldOfView, 0, 0,
+            f / aspectRatio, 0, 0, 0,
+            0, f, 0, 0,
             0, 0, (near + far) * scale, -1,
             0, 0, near * far * scale * 2, 0
         ]);
@@ -218,6 +255,9 @@ var R3 = (function () {
         identity: function () { return new M(); },
         origin: function () { return new V(); },
         toOrigin: function (v) { var o = new V(); o.sub(v); return o; },
+        makeRotateX: makeRotateX,
+        makeRotateY: makeRotateY,
+        makeRotateZ: makeRotateZ,
         matmul: matmul,
         addVectors: addVectors,
         subVectors: subVectors,
