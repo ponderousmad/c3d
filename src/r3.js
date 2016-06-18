@@ -150,12 +150,30 @@ var R3 = (function () {
         return offset + D3;
     };
     
-    V.prototype.set = function(x, y, z, w) {
+    V.prototype.set = function (x, y, z, w) {
         this.x = x || 0;
         this.y = y || 0;
         this.z = z || 0;
         if (w !== undefined) {
             this.w = w;
+        }
+    };
+    
+    V.prototype.v = function (i) {
+        switch(i) {
+            case 0: return this.x;
+            case 1: return this.y;
+            case 2: return this.z;
+            case 3: return this.w;
+        }
+    };
+    
+    V.prototype.setAt = function (i, value) {
+        switch(i) {
+            case 0: this.x = value; return;
+            case 1: this.y = value; return;
+            case 2: this.z = value; return;
+            case 3: this.w = value; return;
         }
     };
     
@@ -224,6 +242,48 @@ var R3 = (function () {
     function subVectors(a, b) {
         return new V(a.x - b.x, a.y - b.y, a.z - b.z, Math.max(0, a.z - b.z)); 
     }
+    
+    var AABox = function () {
+        this.min = null;
+        this.max = null;
+    };
+    
+    AABox.prototype.contains = function (p) {
+        if (this.min === null) {
+            return false;
+        }
+        for (var d = 0; d < D3; ++d) {
+            if (p.v(d) < this.min.v(d)) {
+                return false;
+            }
+            if (p.v(d) > this.max.v(d)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    
+    AABox.prototype.envelope = function (p) {
+        if(p instanceof AABox) {
+            if (p.min) {
+                this.include(p.min);
+                this.include(p.max);
+            }
+        } else if (this.min === null) {
+            this.min = p.copy();
+            this.max = p.copy();
+        } else {
+            for (var d = 0; d < D3; ++d) {
+                var value = p.v(d);
+                if (value < this.min.v(d)) {
+                    this.min.setAt(d, value);
+                }
+                if (value > this.max.v(d)) {
+                    this.max.setAt(d, value);
+                }
+            }
+        }
+    };
     
     function perspective(fieldOfView, aspectRatio, near, far) {
         var scale = 1.0 / (near - far),
@@ -306,6 +366,7 @@ var R3 = (function () {
     return {
         M: M,
         V: V,
+        AABox: AABox,
         newPoint: function (x, y, z) { return new V(x, y, z, 0); },
         identity: function () { return new M(); },
         origin: function () { return new V(); },

@@ -305,6 +305,7 @@ var WGL = (function () {
         this.uvs = [];
         this.tris = [];
         this.index = 0;
+        this.aabb = new R3.AABox();
     }
     
     Mesh.prototype.addVertex = function (p, n, u, v) {
@@ -317,6 +318,7 @@ var WGL = (function () {
         this.normals.push(n.y);
         this.normals.push(n.z);
         this.index += 1;
+        this.aabb.envelope(p);
     };
     
     Mesh.prototype.addTri = function (a, b, c) {
