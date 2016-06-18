@@ -12,7 +12,9 @@ var C3D = (function () {
         this.direction = 1;
         this.maxAngle = Math.PI / 40;
         this.distance = 8000;
+        this.stretch = true;
         this.iPadMiniBackCameraFOV = 28;
+        this.lastImage = null;
     }
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
@@ -20,6 +22,11 @@ var C3D = (function () {
         if (Math.abs(this.angle) > this.maxAngle) {
             this.angle = this.direction * this.maxAngle;
             this.direction = -this.direction;
+        }
+        
+        if (keyboard.wasAsciiPressed("S")) {
+            this.stretch = !this.stretch;
+            this.showImage(this.lastImage);
         }
     };
     
@@ -74,59 +81,78 @@ var C3D = (function () {
         canvas.height = cleanSize;
         context.drawImage(image, 0, 0);
         
-        this.meshes = this.constructGrid(scene);
+        this.meshes = this.constructGrid(scene, this.stretch);
         for (var m = 0; m < this.meshes.length; ++m) {
             this.meshes[m].image = canvas;
         }
         this.angle = 0;
+        this.lastImage = image;
     };
     
-    View.prototype.constructGrid = function (scene) {
+    function calculateVertex(mesh, parameters, x, y, depth) {
+        var pixel = R3.newPoint(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
+        pixel.normalize();
+        var normal = pixel.copy();
+        pixel.scale(depth * parameters.depthScale);
+        pixel.z += parameters.depthOffset;
+        mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
+    }
+    
+    function addTris(mesh, index, stride) {
+        mesh.addTri(index,    index + stride, index + 1);
+        mesh.addTri(index + 1,index + stride, index + stride + 1);
+    }
+    
+    View.prototype.constructGrid = function (scene, stretch) {
         var height = scene.height,
             width = scene.width,
-            xOffset = - width / 2,
-            yOffset = height / 2,
-            depthScale = 1,
-            depthOffset = this.distance,
-            uScale = scene.uMax / scene.width,
-            vScale = scene.vMax / height,
             xStride = 1,
             yStride = 1,
-            widthSteps = width / xStride,
             halfFOV = (this.iPadMiniBackCameraFOV / 2) * Math.PI / 180,
-            planeDistance = (scene.width / 2) / Math.tan(halfFOV),
+            indexStride = stretch ? 1 + (width / xStride) : 2,
+            parameters = {
+                xOffset: - width / 2,
+                yOffset: height / 2,
+                depthScale: 1,
+                depthOffset: this.distance,
+                uScale: scene.uMax / scene.width,
+                vScale: scene.vMax / height,
+                planeDistance: (scene.width / 2) / Math.tan(halfFOV)
+            },
             MAX_INDEX = Math.pow(2, 16),
-            vertex_count = (height + 1) * (width + 1),
+            vertex_count = (stretch ? 1 : 4) * (height + 1) * (width + 1),
             chunks = 2 * Math.ceil(vertex_count / (2 * MAX_INDEX)),
             rowsPerChunk = height / chunks,
             mesh = null,
             meshes = [];
 
         for (var y = 0; y <= height; y += yStride) {
-            var oldMesh = null;
-            var generateTris = y < height;
+            var oldMesh = null,
+                generateTris = y < height;
             if (generateTris && (y % rowsPerChunk) === 0) {
                 oldMesh = mesh;
                 mesh = new WGL.Mesh();
                 meshes.push(mesh);
             }
             for (var x = 0; x <= width; x += xStride) {
-				var depth = scene.cleanDepths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)];
-                var pixel = R3.newPoint(xOffset + x, yOffset - y, -planeDistance),
+				var depth = scene.cleanDepths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)],
                     index = mesh.index;
-                pixel.normalize();
-                var normal = pixel.copy();
-                pixel.scale(depth * depthScale);
-                pixel.z += depthOffset;
-                mesh.addVertex(pixel, normal, x * uScale, y * vScale);
-
-				if (generateTris && x < width) {
-                    mesh.addTri(index,    index + widthSteps + 1, index + 1);
-                    mesh.addTri(index + 1,index + widthSteps + 1, index + widthSteps + 2);
-				}
+                
+                if (stretch) {
+                    calculateVertex(mesh, parameters, x, y, depth);
+                } else {
+                    for (var yi = y; yi <= y+1; ++yi) {
+                        for (var xi = x; xi <= x+1; ++xi) {
+                            calculateVertex(mesh, parameters, xi, yi, depth);
+                        }
+                    }
+                }
+                if ((generateTris && x < width) || !stretch) {
+                    addTris(mesh, index, indexStride);
+                }
 			}
             
-            if (oldMesh) {
+            if (oldMesh && stretch) {
                 oldMesh.appendVerticies(mesh);
             }
 		}
