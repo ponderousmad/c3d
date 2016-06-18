@@ -120,11 +120,11 @@ var R3 = (function () {
         return matmul(this, other);
     };
     
-    M.prototype.t = function (v) {
-        var x = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w *this.at(3, 0),
-            y = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w *this.at(3, 0),
-            z = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w *this.at(3, 0),
-            w = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w *this.at(3, 0);
+    M.prototype.transformV = function (v) {
+        var x = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
+            y = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
+            z = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
+            w = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0);
         v.x = x; v.y = y; v.z = z; v.w = w;
     };
     
@@ -148,6 +148,12 @@ var R3 = (function () {
             return offset + D4;
         }
         return offset + D3;
+    };
+    
+    V.prototype.pushOn = function (array) {
+        array.push(this.x);
+        array.push(this.y);
+        array.push(this.z);
     };
     
     V.prototype.set = function (x, y, z, w) {
@@ -241,6 +247,75 @@ var R3 = (function () {
     
     function subVectors(a, b) {
         return new V(a.x - b.x, a.y - b.y, a.z - b.z, Math.max(0, a.z - b.z)); 
+    }
+    
+    function Q(x, y, z, w) {
+        this.x = x || 0;
+        this.y = y || 0;
+        this.z = z || 0;
+        this.w = w || 0;
+    }
+    
+    Q.prototype.copy = function () {
+        return new Q(this.x, this.y, this.z, this.w);  
+    };
+    
+    Q.prototype.set = function (x, y, z, w) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    };
+    
+    function qmul(a, b, target) {
+		// from http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/code/index.htm
+        var x =  a.x * b.w + a.y * b.z - a.z * b.y + a.w * b.x,
+            y = -a.x * b.z + a.y * b.w + a.z * b.x + a.w * b.y,
+            z =  a.x * b.y - a.y * b.x + a.z * b.w + a.w * b.z,
+            w = -a.x * b.x - a.y * b.y - a.z * b.z + a.w * b.w;
+
+        if (target) {
+            target.set(x, y, z, w);
+            return target;
+        }
+        return new Q(x, y, z, w);
+    }
+    
+    Q.prototype.times = function (other) {
+        qmul(this, other, this);
+    };
+    
+    function angleAxisQ(axis, angle) {
+		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/index.htm
+		// assumes axis is normalized
+		var s = Math.sin(angle/2);
+		return new Q(axis.x * s, axis.y * s, axis.z * s, Math.cos(angle/2));
+    }
+    
+    function eulerQ(x, y, z) {
+        var cosX = Math.cos(x / 2),    cosY = Math.cos(y / 2),    cosZ = Math.cos(z / 2),
+		    sinX = Math.sin(x / 2),    sinY = Math.sin(y / 2),    sinZ = Math.sin(z / 2);
+        
+        return new Q(
+            sinX * cosY * cosZ + cosX * sinY * cosZ,
+			cosX * sinY * cosZ - sinX * cosY * sinZ,
+			cosX * cosY * sinZ + sinX * sinY * cosZ,
+			cosX * cosY * cosZ - sinX * sinY * cosZ
+        );
+    }
+
+    function makeRotateQ(q) {
+		var x2 = q.x + q.x,     y2 = q.y + q.y,     z2 = q.z + q.z,
+            xx = q.x * x2,      xy = q.x * y2,      xz = q.x * z2,
+            yy = q.y * y2,      yz = q.y * z2,      zz = q.z * z2,
+            wx = q.w * x2,      wy = q.w * y2,      wz = q.w * z2;
+
+		return new M([
+            1 - ( yy + zz ), xy + wz,         xz - wy,         0,
+            xy - wz,         1 - ( xx + zz ), yz + wx,         0,
+            xz + wy,         yz - wx,         1 - ( xx + yy ), 0,
+            0,               0,               0,               1
+        ]);
     }
     
     var AABox = function () {
@@ -359,22 +434,36 @@ var R3 = (function () {
         var matrixTests = [  
         ];
         
+        var aaboxTests = [  
+        ];
+        
+        var quaternionTests = [
+        ];
+        
         TEST.run("R3 Vector", vectorTests);
         TEST.run("R3 Matrix", matrixTests);
+        TEST.run("R3 AABox", aaboxTests);
+        TEST.run("Quaternion", quaternionTests);
     }
     
     return {
         M: M,
         V: V,
+        Q: Q,
         AABox: AABox,
         newPoint: function (x, y, z) { return new V(x, y, z, 0); },
         identity: function () { return new M(); },
         origin: function () { return new V(); },
         toOrigin: function (v) { var o = new V(); o.sub(v); return o; },
+        zeroQ: function () { return new Q(0, 0, 0, 1); },
         makeRotateX: makeRotateX,
         makeRotateY: makeRotateY,
         makeRotateZ: makeRotateZ,
+        makeRotateQ: makeRotateQ,
         matmul: matmul,
+        qmul: qmul,
+        angleAxisQ: angleAxisQ,
+        eulerQ: eulerQ,
         addVectors: addVectors,
         subVectors: subVectors,
         perspective: perspective,
