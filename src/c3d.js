@@ -8,32 +8,90 @@ var C3D = (function () {
         this.updateInterval = null;
         this.meshes = null;
         this.program = null;
-        this.angle = 0;
+        this.yAxisAngle = 0;
+        this.xAxisAngle = 0;
         this.direction = 1;
-        this.maxAngle = Math.PI / 40;
+        this.maxAutoAngleY = Math.PI / 40;
+        this.maxAngleY = Math.PI / 4;
+        this.maxAngleX = Math.PI / 8;
         this.distance = 8000;
-        this.stretch = true;
+        this.fill = true;
+        this.stretch = false;
         this.iPadMiniBackCameraFOV = 28;
         this.lastImage = null;
+        this.lastOrbit = null;
     }
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        this.angle += elapsed * 0.00002 * this.direction;
-        if (Math.abs(this.angle) > this.maxAngle) {
-            this.angle = this.direction * this.maxAngle;
-            this.direction = -this.direction;
-        }
-        
         if (keyboard.wasAsciiPressed("S")) {
             this.stretch = !this.stretch;
             this.showImage(this.lastImage);
         }
+        
+        if (keyboard.wasAsciiPressed("F")) {
+            this.fill = !this.fill;
+            if (!this.stretch) {
+                this.showImage(this.lastImage);
+            }
+        }
+        
+        if (keyboard.wasKeyPressed(IO.KEYS.Space)) {
+            if (this.direction) {
+                this.direction = 0;
+            } else {
+                this.direction = this.yAxisAngle < 0 ? 1 : -1;
+            }
+        }
+        
+        if (keyboard.wasAsciiPressed("R")) {
+            this.yAxisAngle = 0;
+            this.xAxisAngle = 0;
+        }
+        
+        var deltaX = 0,
+            deltaY = 0,
+            rate = 0.001;
+        
+        if (pointer.activated()) {
+            this.direction = 0;
+        } else if (this.lastOrbit && pointer.primary) {
+            deltaX = pointer.primary.x - this.lastOrbit.x;
+            deltaY = pointer.primary.y - this.lastOrbit.y;
+            rate = 0.0001;
+        }
+        
+        if (pointer.primary) {
+            this.lastOrbit = pointer.primary;
+        }
+        
+        if (this.direction) {
+            this.yAxisAngle += elapsed * 0.00002 * this.direction;
+            if (Math.abs(this.yAxisAngle) > this.maxAutoAngleY && (this.direction < 0 == this.yAxisAngle < 0)) {
+                this.yAxisAngle = this.direction * this.maxAutoAngleY;
+                this.direction = -this.direction;
+            }
+        } else {
+            if (keyboard.isKeyDown(IO.KEYS.Left)) {
+                deltaX = -1;
+            } else if(keyboard.isKeyDown(IO.KEYS.Right)) {
+                deltaX = 1;
+            }
+            if (keyboard.isKeyDown(IO.KEYS.Up)) {
+                deltaY = -1;
+            } else if(keyboard.isKeyDown(IO.KEYS.Down)) {
+                deltaY = 1;
+            }
+            
+            if (keyboard.isShiftDown()) {
+                rate *= 0.1;
+            }
+        }
+        this.yAxisAngle = Math.min(this.maxAngleY, Math.max(-this.maxAngleY, this.yAxisAngle + deltaX * rate));
+        this.xAxisAngle = Math.min(this.maxAngleX, Math.max(-this.maxAngleX, this.xAxisAngle + deltaY * rate));
     };
     
     View.prototype.render = function (room, width, height) {
         room.clear(this.clearColor);
-        room.viewer.setRotateY(this.angle);
-
         if (this.program === null) {
             var shader = room.programFromElements("vertex-test", "fragment-test");
             this.program = {
@@ -47,7 +105,11 @@ var C3D = (function () {
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
+        var yQ = R3.angleAxisQ(new R3.V(0, 1, 0), this.yAxisAngle),
+            xQ = R3.angleAxisQ(new R3.V(1, 0, 0), this.xAxisAngle);
         
+        
+        room.viewer.orientation = R3.qmul(xQ, yQ);
         room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
         
         if (this.meshes !== null) {
@@ -81,11 +143,10 @@ var C3D = (function () {
         canvas.height = cleanSize;
         context.drawImage(image, 0, 0);
         
-        this.meshes = this.constructGrid(scene, this.stretch);
+        this.meshes = this.constructGrid(scene, this.stretch, this.fill);
         for (var m = 0; m < this.meshes.length; ++m) {
             this.meshes[m].image = canvas;
         }
-        this.angle = 0;
         this.lastImage = image;
     };
     
@@ -103,7 +164,7 @@ var C3D = (function () {
         mesh.addTri(index + 1,index + stride, index + stride + 1);
     }
     
-    View.prototype.constructGrid = function (scene, stretch) {
+    View.prototype.constructGrid = function (scene, stretch, fill) {
         var height = scene.height,
             width = scene.width,
             xStride = 1,
@@ -124,7 +185,8 @@ var C3D = (function () {
             chunks = 2 * Math.ceil(vertex_count / (2 * MAX_INDEX)),
             rowsPerChunk = height / chunks,
             mesh = null,
-            meshes = [];
+            meshes = [],
+            depths = stretch || fill ? scene.cleanDepths : scene.depths;
 
         for (var y = 0; y <= height; y += yStride) {
             var oldMesh = null,
@@ -135,8 +197,12 @@ var C3D = (function () {
                 meshes.push(mesh);
             }
             for (var x = 0; x <= width; x += xStride) {
-				var depth = scene.cleanDepths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)],
+				var depth = depths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)],
                     index = mesh.index;
+                
+                if (depth === null) {
+                    continue;
+                }
                 
                 if (stretch) {
                     calculateVertex(mesh, parameters, x, y, depth);

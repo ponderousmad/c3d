@@ -58,23 +58,19 @@ var WGL = (function () {
         
     function Viewer() {
         this.position = R3.origin();
+        this.orientation = R3.zeroQ();
         this.fov = 90;
         this.near = 0.1;
         this.far = 100;
-        this.rotateY = 0;
     }
     
     Viewer.prototype.perspective = function (aspect) {
         return R3.perspective(this.fov * Math.PI / 180.0, aspect, this.near, this.far);
     };
     
-    Viewer.prototype.setRotateY = function (angle) {
-        this.rotateY = angle;
-    };
-    
     Viewer.prototype.view = function () {
         var v = R3.identity(),
-            r = R3.makeRotateY(this.rotateY);
+            r = R3.makeRotateQ(this.orientation);
         v.translate(R3.toOrigin(this.position));
         return R3.matmul(v, r);
     };
@@ -309,14 +305,10 @@ var WGL = (function () {
     }
     
     Mesh.prototype.addVertex = function (p, n, u, v) {
-        this.vertices.push(p.x);
-        this.vertices.push(p.y);
-        this.vertices.push(p.z);
+        p.pushOn(this.vertices);
+        n.pushOn(this.normals);
         this.uvs.push(u);
         this.uvs.push(v);
-        this.normals.push(n.x);
-        this.normals.push(n.y);
-        this.normals.push(n.z);
         this.index += 1;
         this.aabb.envelope(p);
     };
