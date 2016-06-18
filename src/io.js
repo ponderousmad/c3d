@@ -136,9 +136,9 @@ var IO = (function (TICK, BLORT) {
         };
         
         var updateWheel = function (event) {
-            this.wheelX += event.deltaX;
-            this.wheelY += event.deltaY;
-            this.wheelZ += event.deltaZ;
+            self.wheelX += event.deltaX;
+            self.wheelY += event.deltaY;
+            self.wheelZ += event.deltaZ;
         };
         
         element.addEventListener("mousemove", updateState);
