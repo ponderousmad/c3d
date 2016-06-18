@@ -38,7 +38,7 @@ var C3D = (function () {
             room.viewer.far = 100000;
             room.viewer.position.set(0, 0, this.distance);
             room.viewer.fov = this.iPadMiniBackCameraFOV;
-            room.gl.disable(room.gl.CULL_FACE);
+            room.gl.enable(room.gl.CULL_FACE);
         }
         
         room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
@@ -121,8 +121,8 @@ var C3D = (function () {
                 mesh.addVertex(pixel, normal, x * uScale, y * vScale);
 
 				if (generateTris && x < width) {
-                    mesh.addTri(index,    index + 1,               index + widthSteps + 1);
-                    mesh.addTri(index + 1,index + widthSteps + 1,  index + widthSteps + 2);
+                    mesh.addTri(index,    index + widthSteps + 1, index + 1);
+                    mesh.addTri(index + 1,index + widthSteps + 1, index + widthSteps + 2);
 				}
 			}
             
