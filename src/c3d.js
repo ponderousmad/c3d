@@ -6,7 +6,7 @@ var C3D = (function () {
         this.maximize = true;
         this.updateInDraw = true;
         this.updateInterval = null;
-        this.mesh = null;
+        this.meshes = null;
         this.program = null;
         this.angle = 0;
         this.direction = 1;
@@ -43,12 +43,10 @@ var C3D = (function () {
         
         room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
         
-        if (this.mesh !== null) {
-            if (!this.mesh.isSetup) {
-                room.setupMesh(this.mesh);
-                this.mesh.isSetup = true;
+        if (this.meshes !== null) {
+            for (var m = 0; m < this.meshes.length; ++m) {
+                room.drawMesh(this.meshes[m], this.program);   
             }
-            room.drawMesh(this.mesh, this.program);
         }
     };
     
@@ -76,18 +74,15 @@ var C3D = (function () {
         canvas.height = cleanSize;
         context.drawImage(image, 0, 0);
         
-        this.mesh = this.constructGrid(scene);
-        this.mesh.image = canvas;
+        this.meshes = this.constructGrid(scene);
+        for (var m = 0; m < this.meshes.length; ++m) {
+            this.meshes[m].image = canvas;
+        }
         this.angle = 0;
     };
     
     View.prototype.constructGrid = function (scene) {
-        var vertices = [],
-            tris = [],
-            normals = [],
-            uvs = [],
-            index = 0,
-            height = scene.height,
+        var height = scene.height,
             width = scene.width,
             xOffset = - width / 2,
             yOffset = height / 2,
@@ -95,52 +90,48 @@ var C3D = (function () {
             depthOffset = this.distance,
             uScale = scene.uMax / scene.width,
             vScale = scene.vMax / height,
-            xStride = 4,
-            yStride = 6,
+            xStride = 1,
+            yStride = 1,
             widthSteps = width / xStride,
-            halfWidth = width / 2,
-            halfHeight = height / 2,
-            MAX_FROM_CENTER = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight),
             halfFOV = (this.iPadMiniBackCameraFOV / 2) * Math.PI / 180,
-            planeDistance = (scene.width / 2) / Math.tan(halfFOV);
+            planeDistance = (scene.width / 2) / Math.tan(halfFOV),
+            MAX_INDEX = Math.pow(2, 16),
+            vertex_count = (height + 1) * (width + 1),
+            chunks = 2 * Math.ceil(vertex_count / (2 * MAX_INDEX)),
+            rowsPerChunk = height / chunks,
+            mesh = null,
+            meshes = [];
 
         for (var y = 0; y <= height; y += yStride) {
+            var oldMesh = null;
             var generateTris = y < height;
+            if (generateTris && (y % rowsPerChunk) === 0) {
+                oldMesh = mesh;
+                mesh = new WGL.Mesh();
+                meshes.push(mesh);
+            }
             for (var x = 0; x <= width; x += xStride) {
 				var depth = scene.cleanDepths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)];
-                var pixel = R3.newPoint(xOffset + x, yOffset - y, -planeDistance);
+                var pixel = R3.newPoint(xOffset + x, yOffset - y, -planeDistance),
+                    index = mesh.index;
                 pixel.normalize();
-                
-				normals.push(pixel.x);
-                normals.push(pixel.y);
-                normals.push(pixel.x);
-                
+                var normal = pixel.copy();
                 pixel.scale(depth * depthScale);
-				vertices.push(pixel.x);
-                vertices.push(pixel.y);
-                vertices.push(pixel.z + depthOffset);
-
-                uvs.push(x * uScale);
-                uvs.push(y * vScale);
+                pixel.z += depthOffset;
+                mesh.addVertex(pixel, normal, x * uScale, y * vScale);
 
 				if (generateTris && x < width) {
-					tris.push(index);
-					tris.push(index + 1);
-					tris.push(index + widthSteps + 1);
-					tris.push(index + 1);
-					tris.push(index + widthSteps + 1);
-					tris.push(index + widthSteps + 2);
+                    mesh.addTri(index,    index + 1,               index + widthSteps + 1);
+                    mesh.addTri(index + 1,index + widthSteps + 1,  index + widthSteps + 2);
 				}
-				++index;
 			}
+            
+            if (oldMesh) {
+                oldMesh.appendVerticies(mesh);
+            }
 		}
         
-        return {
-            vertices: vertices,
-            tris: tris,
-            uvs: uvs,
-            normals: normals
-        };
+        return meshes;
     };
     
     window.onload = function(e) {

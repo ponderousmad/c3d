@@ -191,22 +191,37 @@ var WGL = (function () {
     };
     
     Room.prototype.setupMesh = function (mesh) {
-        mesh.vertexBuffer = this.setupFloatBuffer(mesh.vertices);
-        mesh.uvBuffer = this.setupFloatBuffer(mesh.uvs);
-        mesh.triBuffer = this.setupElementBuffer(mesh.tris);
-        if (mesh.image) {
-            mesh.texture = this.setupTexture(mesh.image);
+        if (!mesh.drawData) {
+            if (mesh.index >= Math.pow(2, 16)) {
+                throw "Mesh has too many verticies to index!";
+            }
+            for (var i = 0; i < mesh.tris.length; ++i) {
+                if (mesh.tris[i] >= mesh.index) {
+                    throw "Past end of verticies:" + mesh.tris[i] + ", " + mesh.index;
+                }
+            }
+            
+            mesh.drawData = {
+                vertexBuffer: this.setupFloatBuffer(mesh.vertices),
+                uvBuffer: this.setupFloatBuffer(mesh.uvs),
+                triBuffer: this.setupElementBuffer(mesh.tris)
+            };
+            if (mesh.image) {
+                mesh.drawData.texture = this.setupTexture(mesh.image);
+            }
         }
+        return mesh.drawData;
     };
     
     Room.prototype.drawMesh = function (mesh, program) {
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, mesh.vertexBuffer);
+        var draw = this.setupMesh(mesh);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.vertexBuffer);
         this.gl.vertexAttribPointer(program.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, mesh.uvBuffer);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.uvBuffer);
         this.gl.vertexAttribPointer(program.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, mesh.triBuffer);
-        if (mesh.texture) {
-            this.bindTexture(program.shader, program.textureVariable, mesh.texture);
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, draw.triBuffer);
+        if (draw.texture) {
+            this.bindTexture(program.shader, program.textureVariable, draw.texture);
         }
         this.gl.drawElements(this.gl.TRIANGLES, mesh.tris.length, this.gl.UNSIGNED_SHORT, 0);
     };
@@ -284,7 +299,41 @@ var WGL = (function () {
         this.drawTestSquare(this.testSetup);
     };
     
+    function Mesh() {
+        this.vertices = [];
+        this.normals = [];
+        this.uvs = [];
+        this.tris = [];
+        this.index = 0;
+    }
+    
+    Mesh.prototype.addVertex = function (p, n, u, v) {
+        this.vertices.push(p.x);
+        this.vertices.push(p.y);
+        this.vertices.push(p.z);
+        this.uvs.push(u);
+        this.uvs.push(v);
+        this.normals.push(n.x);
+        this.normals.push(n.y);
+        this.normals.push(n.z);
+        this.index += 1;
+    };
+    
+    Mesh.prototype.addTri = function (a, b, c) {
+        this.tris.push(a);
+        this.tris.push(b);
+        this.tris.push(c);
+    };
+    
+    Mesh.prototype.appendVerticies = function (other) {
+        this.vertices = this.vertices.concat(other.vertices);
+        this.normals = this.normals.concat(other.normals);
+        this.uvs = this.uvs.concat(other.uvs);
+        this.index += other.index;
+    };
+    
     return {
-        Room: Room
+        Room: Room,
+        Mesh: Mesh
     };
 }());
