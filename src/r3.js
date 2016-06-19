@@ -97,7 +97,6 @@ var R3 = (function () {
             result = new M();
         }
         
-        
         for (var i = 0; i < D4; ++i) {
             for (var j = 0; j < D4; ++j) {
                 var value = 0.0;
@@ -121,11 +120,15 @@ var R3 = (function () {
     };
     
     M.prototype.transformV = function (v) {
-        var x = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
-            y = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
-            z = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0),
-            w = v.x * this.at(0, 0) + v.y * this.at(1, 0) + v.z * this.at(2, 0) + v.w * this.at(3, 0);
-        v.x = x; v.y = y; v.z = z; v.w = w;
+        var result = new V();
+        for (var i = 0; i < D4; ++i) {
+            var value = 0;
+            for (var j = 0; j < D4; ++j) {
+                value += v.v(j) * this.at(j, i);
+            }
+            result.setAt(i, value);
+        }
+        return result;
     };
     
     function V(x, y, z, w) {
@@ -341,8 +344,8 @@ var R3 = (function () {
     AABox.prototype.envelope = function (p) {
         if(p instanceof AABox) {
             if (p.min) {
-                this.include(p.min);
-                this.include(p.max);
+                this.envelope(p.min);
+                this.envelope(p.max);
             }
         } else if (this.min === null) {
             this.min = p.copy();
@@ -358,6 +361,16 @@ var R3 = (function () {
                 }
             }
         }
+    };
+    
+    AABox.prototype.center = function () {
+        if (this.min === null) {
+            return null;
+        }
+        var c = this.min.copy();
+        c.add(this.max);
+        c.scale(0.5);
+        return c;
     };
     
     function perspective(fieldOfView, aspectRatio, near, far) {
@@ -464,6 +477,8 @@ var R3 = (function () {
         qmul: qmul,
         angleAxisQ: angleAxisQ,
         eulerQ: eulerQ,
+        pointDistanceSq: pointDistanceSq,   
+        pointDistance: pointDistance,
         addVectors: addVectors,
         subVectors: subVectors,
         perspective: perspective,
