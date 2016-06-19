@@ -139,6 +139,9 @@ var IO = (function (TICK, BLORT) {
             self.wheelX += event.deltaX;
             self.wheelY += event.deltaY;
             self.wheelZ += event.deltaZ;
+            
+            event.preventDefault();
+            event.stopImmediatePropagation();
         };
         
         element.addEventListener("mousemove", updateState);
@@ -215,6 +218,9 @@ var IO = (function (TICK, BLORT) {
                 };
             }
         }
+        this.wheelX = this.mouse.wheelX;
+        this.wheelY = this.mouse.wheelY;
+        this.wheelZ = this.mouse.wheelZ;
         this.primary = spot;
         this.mouse.postUpdate();
     };
