@@ -58,7 +58,9 @@ var C3D = (function () {
         } else if (this.lastOrbit && pointer.primary) {
             deltaX = pointer.primary.x - this.lastOrbit.x;
             deltaY = pointer.primary.y - this.lastOrbit.y;
-            rate = 0.0025;
+            if (deltaX || deltaY) {
+                rate = 0.0025;
+            }
         }
         
         if (pointer.primary) {
