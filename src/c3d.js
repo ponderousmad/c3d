@@ -18,7 +18,7 @@ var C3D = (function () {
         this.center = R3.origin();
         this.fill = true;
         this.stretch = false;
-        this.iPadMiniBackCameraFOV = 28;
+        this.iPadMiniBackCameraFOV = 56;
         this.lastImage = null;
         this.lastOrbit = null;
     }
@@ -163,7 +163,8 @@ var C3D = (function () {
         var pixel = R3.newPoint(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
         pixel.normalize();
         var normal = pixel.copy();
-        pixel.scale(depth * parameters.depthScale);
+        pixel.scale(depth);
+        pixel.z *= parameters.depthScale;
         mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
     }
     
@@ -178,11 +179,12 @@ var C3D = (function () {
             xStride = 1,
             yStride = 1,
             indexStride = stretch ? 1 + (width / xStride) : 2,
-            halfFOV = (this.iPadMiniBackCameraFOV / 2) * R2.DEG_TO_RAD,
+            depthScale = 0.01,
+            halfFOV = (this.iPadMiniBackCameraFOV * depthScale/ 2) * R2.DEG_TO_RAD,
             parameters = {
                 xOffset: - width / 2,
                 yOffset: height / 2,
-                depthScale: 1,
+                depthScale: depthScale,
                 uScale: scene.uMax / scene.width,
                 vScale: scene.vMax / height,
                 planeDistance: (scene.width / 2) / Math.tan(halfFOV)
