@@ -105,11 +105,8 @@ var C3D = (function () {
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
-        var yQ = R3.angleAxisQ(new R3.V(0, 1, 0), this.yAxisAngle),
-            xQ = R3.angleAxisQ(new R3.V(1, 0, 0), this.xAxisAngle);
-        
-        
-        room.viewer.orientation = R3.qmul(xQ, yQ);
+
+        room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
         room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
         
         if (this.meshes !== null) {

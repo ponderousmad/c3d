@@ -297,10 +297,10 @@ var R3 = (function () {
 		    sinX = Math.sin(x / 2),    sinY = Math.sin(y / 2),    sinZ = Math.sin(z / 2);
         
         return new Q(
-            sinX * cosY * cosZ + cosX * sinY * cosZ,
+            sinX * cosY * cosZ + cosX * sinY * sinZ,
 			cosX * sinY * cosZ - sinX * cosY * sinZ,
 			cosX * cosY * sinZ + sinX * sinY * cosZ,
-			cosX * cosY * cosZ - sinX * sinY * cosZ
+			cosX * cosY * cosZ - sinX * sinY * sinZ
         );
     }
 
