@@ -65,7 +65,7 @@ var WGL = (function () {
     }
     
     Viewer.prototype.perspective = function (aspect) {
-        return R3.perspective(this.fov * Math.PI / 180.0, aspect, this.near, this.far);
+        return R3.perspective(this.fov * R2.DEG_TO_RAD, aspect, this.near, this.far);
     };
     
     Viewer.prototype.view = function () {
@@ -301,7 +301,7 @@ var WGL = (function () {
         this.uvs = [];
         this.tris = [];
         this.index = 0;
-        this.aabb = new R3.AABox();
+        this.bbox = new R3.AABox();
     }
     
     Mesh.prototype.addVertex = function (p, n, u, v) {
@@ -310,7 +310,7 @@ var WGL = (function () {
         this.uvs.push(u);
         this.uvs.push(v);
         this.index += 1;
-        this.aabb.envelope(p);
+        this.bbox.envelope(p);
     };
     
     Mesh.prototype.addTri = function (a, b, c) {

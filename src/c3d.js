@@ -10,11 +10,12 @@ var C3D = (function () {
         this.program = null;
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
-        this.direction = 1;
-        this.maxAutoAngleY = Math.PI / 40;
-        this.maxAngleY = Math.PI / 4;
-        this.maxAngleX = Math.PI / 8;
-        this.distance = 8000;
+        this.direction = 0;
+        this.maxAngleY = 90 * R2.DEG_TO_RAD;
+        this.maxAngleX = this.maxAngleY * 0.75;
+        this.maxAutoAngleY = this.maxAngleY / 2;
+        this.distance = 0;
+        this.center = R3.origin();
         this.fill = true;
         this.stretch = false;
         this.iPadMiniBackCameraFOV = 28;
@@ -50,7 +51,7 @@ var C3D = (function () {
         
         var deltaX = 0,
             deltaY = 0,
-            rate = 0.001;
+            rate = this.direction ? 0.00002 : 0.001;
         
         if (pointer.activated()) {
             this.direction = 0;
@@ -63,9 +64,15 @@ var C3D = (function () {
         if (pointer.primary) {
             this.lastOrbit = pointer.primary;
         }
+   
+        if (keyboard.isShiftDown()) {
+            rate *= 10;
+        } else if(keyboard.isAltDown()) {
+            rate *= 0.1;
+        }
         
         if (this.direction) {
-            this.yAxisAngle += elapsed * 0.00002 * this.direction;
+            this.yAxisAngle += elapsed * rate * this.direction;
             if (Math.abs(this.yAxisAngle) > this.maxAutoAngleY && (this.direction < 0 == this.yAxisAngle < 0)) {
                 this.yAxisAngle = this.direction * this.maxAutoAngleY;
                 this.direction = -this.direction;
@@ -80,10 +87,6 @@ var C3D = (function () {
                 deltaY = -1;
             } else if(keyboard.isKeyDown(IO.KEYS.Down)) {
                 deltaY = 1;
-            }
-            
-            if (keyboard.isShiftDown()) {
-                rate *= 0.1;
             }
         }
         this.yAxisAngle = Math.min(this.maxAngleY, Math.max(-this.maxAngleY, this.yAxisAngle + deltaX * rate));
@@ -101,15 +104,16 @@ var C3D = (function () {
                 textureVariable: "uSampler"
             };
             room.viewer.far = 100000;
-            room.viewer.position.set(0, 0, this.distance);
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
 
-        room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
-        room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
-        
         if (this.meshes !== null) {
+            room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
+            var rotate = R3.makeRotateQ(room.viewer.orientation);
+            room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
+            room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
+
             for (var m = 0; m < this.meshes.length; ++m) {
                 room.drawMesh(this.meshes[m], this.program);   
             }
@@ -141,10 +145,18 @@ var C3D = (function () {
         context.drawImage(image, 0, 0);
         
         this.meshes = this.constructGrid(scene, this.stretch, this.fill);
+        var bbox = new R3.AABox();
         for (var m = 0; m < this.meshes.length; ++m) {
-            this.meshes[m].image = canvas;
+            var mesh = this.meshes[m];
+            mesh.image = canvas;
+            bbox.envelope(mesh.bbox);
         }
+        this.center = bbox.center();
+        console.log(bbox);
+        this.center.setAt(0, 0);
+        this.center.setAt(1, 0);
         this.lastImage = image;
+        this.distance = this.center.z;
     };
     
     function calculateVertex(mesh, parameters, x, y, depth) {
@@ -152,7 +164,6 @@ var C3D = (function () {
         pixel.normalize();
         var normal = pixel.copy();
         pixel.scale(depth * parameters.depthScale);
-        pixel.z += parameters.depthOffset;
         mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
     }
     
@@ -166,13 +177,12 @@ var C3D = (function () {
             width = scene.width,
             xStride = 1,
             yStride = 1,
-            halfFOV = (this.iPadMiniBackCameraFOV / 2) * Math.PI / 180,
             indexStride = stretch ? 1 + (width / xStride) : 2,
+            halfFOV = (this.iPadMiniBackCameraFOV / 2) * R2.DEG_TO_RAD,
             parameters = {
                 xOffset: - width / 2,
                 yOffset: height / 2,
                 depthScale: 1,
-                depthOffset: this.distance,
                 uScale: scene.uMax / scene.width,
                 vScale: scene.vMax / height,
                 planeDistance: (scene.width / 2) / Math.tan(halfFOV)
