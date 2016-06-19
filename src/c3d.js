@@ -179,7 +179,7 @@ var C3D = (function () {
             xStride = 1,
             yStride = 1,
             indexStride = stretch ? 1 + (width / xStride) : 2,
-            depthScale = 0.01,
+            depthScale = 2 / scene.width,
             halfFOV = (this.iPadMiniBackCameraFOV * depthScale/ 2) * R2.DEG_TO_RAD,
             parameters = {
                 xOffset: - width / 2,
@@ -187,7 +187,7 @@ var C3D = (function () {
                 depthScale: depthScale,
                 uScale: scene.uMax / scene.width,
                 vScale: scene.vMax / height,
-                planeDistance: (scene.width / 2) / Math.tan(halfFOV)
+                planeDistance: 1 / (depthScale * Math.tan(halfFOV))
             },
             MAX_INDEX = Math.pow(2, 16),
             vertex_count = (stretch ? 1 : 4) * (height + 1) * (width + 1),
