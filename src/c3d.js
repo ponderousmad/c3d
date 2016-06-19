@@ -12,7 +12,7 @@ var C3D = (function () {
         this.xAxisAngle = 0;
         this.direction = 0;
         this.maxAngleY = 90 * R2.DEG_TO_RAD;
-        this.maxAngleX = this.maxAngleY * 0.75;
+        this.maxAngleX = this.maxAngleY;
         this.maxAutoAngleY = this.maxAngleY / 2;
         this.distance = 0;
         this.center = R3.origin();
@@ -51,14 +51,14 @@ var C3D = (function () {
         
         var deltaX = 0,
             deltaY = 0,
-            rate = this.direction ? 0.00002 : 0.001;
+            rate = 0.0001;
         
         if (pointer.activated()) {
             this.direction = 0;
         } else if (this.lastOrbit && pointer.primary) {
             deltaX = pointer.primary.x - this.lastOrbit.x;
             deltaY = pointer.primary.y - this.lastOrbit.y;
-            rate = 0.0001;
+            rate = 0.0025;
         }
         
         if (pointer.primary) {
@@ -79,14 +79,14 @@ var C3D = (function () {
             }
         } else {
             if (keyboard.isKeyDown(IO.KEYS.Left)) {
-                deltaX = -1;
+                deltaX = -elapsed;
             } else if(keyboard.isKeyDown(IO.KEYS.Right)) {
-                deltaX = 1;
+                deltaX = elapsed;
             }
             if (keyboard.isKeyDown(IO.KEYS.Up)) {
-                deltaY = -1;
+                deltaY = -elapsed;
             } else if(keyboard.isKeyDown(IO.KEYS.Down)) {
-                deltaY = 1;
+                deltaY = elapsed;
             }
         }
         this.yAxisAngle = Math.min(this.maxAngleY, Math.max(-this.maxAngleY, this.yAxisAngle + deltaX * rate));
