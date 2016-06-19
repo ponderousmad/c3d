@@ -72,7 +72,7 @@ var WGL = (function () {
         var v = R3.identity(),
             r = R3.makeRotateQ(this.orientation);
         v.translate(R3.toOrigin(this.position));
-        return R3.matmul(v, r);
+        return R3.matmul(r, v);
     };
     
     function Room(canvas) {
