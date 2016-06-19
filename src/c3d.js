@@ -15,6 +15,7 @@ var C3D = (function () {
         this.maxAngleX = this.maxAngleY;
         this.maxAutoAngleY = this.maxAngleY / 2;
         this.distance = 0;
+        this.imageDistance = 0;
         this.center = R3.origin();
         this.fill = true;
         this.stretch = false;
@@ -47,11 +48,17 @@ var C3D = (function () {
         if (keyboard.wasAsciiPressed("R")) {
             this.yAxisAngle = 0;
             this.xAxisAngle = 0;
+            this.distance = this.imageDistance;
         }
         
         var deltaX = 0,
             deltaY = 0,
             rate = 0.0001;
+        
+        if (pointer.wheelY) {
+            var WHEEL_BASE = 1000;
+            this.distance *= (WHEEL_BASE + pointer.wheelY) / WHEEL_BASE;
+        }
         
         if (pointer.activated()) {
             this.direction = 0;
@@ -125,6 +132,7 @@ var C3D = (function () {
     View.prototype.loadImage = function (event) {
         var image = new Image();
         image.src = event.target.result;
+        this.distance = 0;
         
         this.showImage(image);
     };
@@ -158,7 +166,10 @@ var C3D = (function () {
         this.center.setAt(0, 0);
         this.center.setAt(1, 0);
         this.lastImage = image;
-        this.distance = this.center.z;
+        this.imageDistance = this.center.z;
+        if (!this.distance) {
+            this.distance = this.imageDistance;
+        }
     };
     
     function calculateVertex(mesh, parameters, x, y, depth) {
