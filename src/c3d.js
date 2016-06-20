@@ -18,7 +18,7 @@ var C3D = (function () {
         this.imageDistance = 0;
         this.center = R3.origin();
         this.fill = true;
-        this.stretch = false;
+        this.stitchMode = "smart";
         this.iPadMiniBackCameraFOV = 56;
         this.lastImage = null;
         this.lastOrbit = null;
@@ -26,13 +26,20 @@ var C3D = (function () {
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         if (keyboard.wasAsciiPressed("S")) {
+            if (this.stitchMode == "smart")  {
+                this.stitchMode = null;
+            } else if (this.stitchMode == "simple") {
+                this.stitchMode = "smart";
+            } else {
+                this.stitchMode = "simple";
+            }
             this.stretch = !this.stretch;
             this.showImage(this.lastImage);
         }
         
         if (keyboard.wasAsciiPressed("F")) {
             this.fill = !this.fill;
-            if (!this.stretch) {
+            if (this.stitchMode != "simple") {
                 this.showImage(this.lastImage);
             }
         }
@@ -154,7 +161,7 @@ var C3D = (function () {
         canvas.height = cleanSize;
         context.drawImage(image, 0, 0);
         
-        this.meshes = this.constructGrid(scene, this.stretch, this.fill);
+        this.meshes = this.constructGrid(scene, this.stitchMode, this.fill);
         var bbox = new R3.AABox();
         for (var m = 0; m < this.meshes.length; ++m) {
             var mesh = this.meshes[m];
@@ -186,12 +193,17 @@ var C3D = (function () {
         mesh.addTri(index + 1,index + stride, index + stride + 1);
     }
     
-    View.prototype.constructGrid = function (scene, stretch, fill) {
+    function lookupDepth(depths, scene, x, y, height, width) {
+        return depths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)];
+    }
+    
+    View.prototype.constructGrid = function (scene, stitch, fill) {
         var height = scene.height,
             width = scene.width,
             xStride = 1,
             yStride = 1,
-            indexStride = stretch ? 1 + (width / xStride) : 2,
+            rowIndexWidth = 1 + (width / xStride),
+            indexStride = stitch == "simple" ? rowIndexWidth : 2,
             depthScale = 2 / scene.width,
             halfFOV = (this.iPadMiniBackCameraFOV * depthScale/ 2) * R2.DEG_TO_RAD,
             parameters = {
@@ -203,12 +215,14 @@ var C3D = (function () {
                 planeDistance: 1 / (depthScale * Math.tan(halfFOV))
             },
             MAX_INDEX = Math.pow(2, 16),
-            vertex_count = (stretch ? 1 : 4) * (height + 1) * (width + 1),
-            chunks = 2 * Math.ceil(vertex_count / (2 * MAX_INDEX)),
+            SMART_STITCH_MAX_DIFFERENCE = 50,
+            pixelIndexStride = (stitch == "simple" ? 1 : 4),
+            vertexCount = pixelIndexStride * (height + 1) * (width + 1),
+            chunks = 2 * Math.ceil(vertexCount / (2 * MAX_INDEX)),
             rowsPerChunk = height / chunks,
             mesh = null,
             meshes = [],
-            depths = stretch || fill ? scene.cleanDepths : scene.depths;
+            depths = (stitch == "simple") || fill ? scene.cleanDepths : scene.depths;
 
         for (var y = 0; y <= height; y += yStride) {
             var oldMesh = null,
@@ -219,14 +233,20 @@ var C3D = (function () {
                 meshes.push(mesh);
             }
             for (var x = 0; x <= width; x += xStride) {
-				var depth = depths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)],
-                    index = mesh.index;
+				var depth = lookupDepth(depths, scene, x, y, width, height),
+                    index = mesh.index,
+                    generateTri = (generateTris && x < width) || !stitch;
                 
                 if (depth === null) {
-                    continue;
+                    if (stitch == "smart") {
+                        depth = lookupDepth(scene.cleanDepths, scene, x, y, width, height),
+                        generateTri = false;
+                    } else {
+                        continue;
+                    }
                 }
                 
-                if (stretch) {
+                if (stitch=="simple") {
                     calculateVertex(mesh, parameters, x, y, depth);
                 } else {
                     for (var yi = y; yi <= y+1; ++yi) {
@@ -235,12 +255,34 @@ var C3D = (function () {
                         }
                     }
                 }
-                if ((generateTris && x < width) || !stretch) {
+                
+                if (stitch == "smart") {
+                    if (generateTri) {
+                        var iUL = 0, iUR = 1, iDL = 2, iDR = 3;
+                        if (x < width && y < height) {
+                            var depthR = lookupDepth(depths, scene, x + 1, y, width, height),
+                                depthD = lookupDepth(depths, scene, x, y + 1, width, height),
+                                depthDR= lookupDepth(depths, scene, x + 1, y + 1, width, height);
+
+                            if (depthR !== null && Math.abs(depth-depthR) <= SMART_STITCH_MAX_DIFFERENCE) {
+                                iUR = pixelIndexStride;
+                            }
+                            if (depthD !== null && Math.abs(depth-depthD) <= SMART_STITCH_MAX_DIFFERENCE) {
+                                iDL = pixelIndexStride * rowIndexWidth;
+                            }
+                            if (depthDR !== null && Math.abs(depth-depthDR) <= SMART_STITCH_MAX_DIFFERENCE) {
+                                iDR = pixelIndexStride * (1 + rowIndexWidth);
+                            }
+                        }
+                        mesh.addTri(index + iUL, index + iDL, index + iUR);
+                        mesh.addTri(index + iUR, index + iDL, index + iDR);
+                    }
+                } else if (generateTri) {
                     addTris(mesh, index, indexStride);
                 }
 			}
             
-            if (oldMesh && stretch) {
+            if (oldMesh && stitch) {
                 oldMesh.appendVerticies(mesh);
             }
 		}
