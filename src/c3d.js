@@ -290,23 +290,32 @@ var C3D = (function () {
         return meshes;
     };
     
+    function getQuerryParameter(querry, parameter) {
+        try {
+            if (querry) {
+                var splitOnName = querry.split(parameter + "=");
+                if (splitOnName.length > 1) {
+                    var splitOnAmpersand = splitOnName[1].split("&");
+                    if (splitOnAmpersand.length > 0) {
+                        return decodeURIComponent(splitOnAmpersand[0]);
+                    }
+                }
+            }
+        } catch(e) {
+            console.log("Error Parsing Querry: " + e);
+        }
+        return null;
+    }
+    
     window.onload = function(e) {
         MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
             view = new View(),
             batch = new BLIT.Batch("/captures/"),
             querry = location.search,
-            image = "random.png";
-        
-        if (querry) {
-            try {
-                var querryImage = decodeURIComponent(querry.split("image=")[1].split("&"));
-                image = querryImage;
-            } catch(err) {
-                console.log("Parsing querry image: " + err);
-            }
-        }
-        
+            image = getQuerryParameter(querry, "image") || "random.png";
+        view.fill = getQuerryParameter(querry, "fill") == "1";
+        console.log("Fill:", getQuerryParameter(querry, "fill"));
         batch.load(image, function(image) {view.showImage(image);});
         batch.commit();
         
