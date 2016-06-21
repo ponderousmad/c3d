@@ -239,7 +239,7 @@ var C3D = (function () {
                 
                 if (depth === null) {
                     if (stitch == "smart") {
-                        depth = lookupDepth(scene.cleanDepths, scene, x, y, width, height),
+                        depth = lookupDepth(scene.cleanDepths, scene, x, y, width, height);
                         generateTri = false;
                     } else {
                         continue;
