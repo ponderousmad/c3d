@@ -296,12 +296,16 @@ var C3D = (function () {
             view = new View(),
             batch = new BLIT.Batch("/captures/"),
             querry = location.search,
-            image = decodeURIComponent(querry.split("image=")[1].split("&"));
-        
-        if (!image) {
             image = "random.png";
-        } 
         
+        if (querry) {
+            try {
+                var querryImage = decodeURIComponent(querry.split("image=")[1].split("&"));
+                image = querryImage;
+            } catch(err) {
+                console.log("Parsing querry image: " + err);
+            }
+        }
         
         batch.load(image, function(image) {view.showImage(image);});
         batch.commit();
