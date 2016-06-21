@@ -294,9 +294,16 @@ var C3D = (function () {
         MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
             view = new View(),
-            batch = new BLIT.Batch("images/");
+            batch = new BLIT.Batch("/captures/"),
+            querry = location.search,
+            image = decodeURIComponent(querry.split("image=")[1].split("&"));
         
-        batch.load("test.png", function(image) {view.showImage(image);});
+        if (!image) {
+            image = "random.png";
+        } 
+        
+        
+        batch.load(image, function(image) {view.showImage(image);});
         batch.commit();
         
         MAIN.start(canvas, view);
