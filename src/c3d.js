@@ -290,10 +290,10 @@ var C3D = (function () {
         return meshes;
     };
     
-    function getQuerryParameter(querry, parameter, defaultValue) {
+    function getQueryParameter(query, parameter, defaultValue) {
         try {
-            if (querry) {
-                var splitOnName = querry.split(parameter + "=");
+            if (query) {
+                var splitOnName = query.split(parameter + "=");
                 if (splitOnName.length > 1) {
                     var splitOnAmpersand = splitOnName[1].split("&");
                     if (splitOnAmpersand.length > 0) {
@@ -302,7 +302,7 @@ var C3D = (function () {
                 }
             }
         } catch(e) {
-            console.log("Error Parsing Querry: " + e);
+            console.log("Error Parsing Query: " + e);
         }
         return defaultValue;
     }
@@ -312,9 +312,9 @@ var C3D = (function () {
         var canvas = document.getElementById("canvas3D"),
             view = new View(),
             batch = new BLIT.Batch("/captures/"),
-            querry = location.search,
-            image = getQuerryParameter(querry, "image") || "random.png";
-        view.fill = getQuerryParameter(querry, "fill", "1") == "1";
+            query = location.search,
+            image = getQueryParameter(query, "image") || "random.png";
+        view.fill = getQueryParameter(query, "fill", "1") == "1";
         batch.load(image, function(image) {view.showImage(image);});
         batch.commit();
         
