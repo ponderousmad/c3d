@@ -290,7 +290,7 @@ var C3D = (function () {
         return meshes;
     };
     
-    function getQuerryParameter(querry, parameter) {
+    function getQuerryParameter(querry, parameter, defaultValue) {
         try {
             if (querry) {
                 var splitOnName = querry.split(parameter + "=");
@@ -304,7 +304,7 @@ var C3D = (function () {
         } catch(e) {
             console.log("Error Parsing Querry: " + e);
         }
-        return null;
+        return defaultValue;
     }
     
     window.onload = function(e) {
@@ -314,8 +314,7 @@ var C3D = (function () {
             batch = new BLIT.Batch("/captures/"),
             querry = location.search,
             image = getQuerryParameter(querry, "image") || "random.png";
-        view.fill = getQuerryParameter(querry, "fill") == "1";
-        console.log("Fill:", getQuerryParameter(querry, "fill"));
+        view.fill = getQuerryParameter(querry, "fill", "1") == "1";
         batch.load(image, function(image) {view.showImage(image);});
         batch.commit();
         
