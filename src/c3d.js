@@ -215,7 +215,8 @@ var C3D = (function () {
                 planeDistance: 1 / (depthScale * Math.tan(halfFOV))
             },
             MAX_INDEX = Math.pow(2, 16),
-            SMART_STITCH_MAX_DIFFERENCE = 50,
+            SMART_STITCH_MAX_DIFFERENCE = 150,
+            SMART_STITCH_DIFFERENCE_THRESHOLD = 0.05,
             pixelIndexStride = (stitch == "simple" ? 1 : 4),
             vertexCount = pixelIndexStride * (height + 1) * (width + 1),
             chunks = 2 * Math.ceil(vertexCount / (2 * MAX_INDEX)),
@@ -262,15 +263,17 @@ var C3D = (function () {
                         if (x < width && y < height) {
                             var depthR = lookupDepth(depths, scene, x + 1, y, width, height),
                                 depthD = lookupDepth(depths, scene, x, y + 1, width, height),
-                                depthDR= lookupDepth(depths, scene, x + 1, y + 1, width, height);
+                                depthDR= lookupDepth(depths, scene, x + 1, y + 1, width, height),
+                                threshold = Math.min(SMART_STITCH_MAX_DIFFERENCE,
+                                                     depth * SMART_STITCH_DIFFERENCE_THRESHOLD);
 
-                            if (depthR !== null && Math.abs(depth-depthR) <= SMART_STITCH_MAX_DIFFERENCE) {
+                            if (depthR !== null && Math.abs(depth-depthR) <= threshold) {
                                 iUR = pixelIndexStride;
                             }
-                            if (depthD !== null && Math.abs(depth-depthD) <= SMART_STITCH_MAX_DIFFERENCE) {
+                            if (depthD !== null && Math.abs(depth-depthD) <= threshold) {
                                 iDL = pixelIndexStride * rowIndexWidth;
                             }
-                            if (depthDR !== null && Math.abs(depth-depthDR) <= SMART_STITCH_MAX_DIFFERENCE) {
+                            if (depthDR !== null && Math.abs(depth-depthDR) <= threshold) {
                                 iDR = pixelIndexStride * (1 + rowIndexWidth);
                             }
                         }
