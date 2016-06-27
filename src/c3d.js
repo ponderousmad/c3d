@@ -6,6 +6,7 @@ var C3D = (function () {
         this.maximize = true;
         this.updateInDraw = true;
         this.updateInterval = null;
+        this.consumeKeys = true;
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
@@ -22,40 +23,74 @@ var C3D = (function () {
         this.iPadMiniBackCameraFOV = 56;
         this.lastImage = null;
         this.lastOrbit = null;
+        
+        this.fillCheckbox = document.getElementById("fill");
+        this.turntableCheckbox = document.getElementById("turntable");
+        this.stitchCombo = document.getElementById("stitch");
+        
+        var self = this;
+        
+        this.fillCheckbox.addEventListener("change", function (e) {
+            self.fill = self.fillCheckbox.checked;
+            self.updateFill();
+        });
+        
+        this.turntableCheckbox.addEventListener("change", function (e) {
+            if (self.direction) {
+                self.direction = 0;
+            } else {
+                self.direction = 1;
+            }
+        });
+        
+        this.stitchCombo.addEventListener("change", function (e) {
+            self.stitchMode = self.stitchCombo.value;
+            self.showImage(self.lastImage);
+        });
     }
+    
+    View.prototype.updateFill = function () {
+        if (this.stitchMode != "simple") {
+            this.showImage(this.lastImage);
+        } else {
+            this.updateControls();
+        }
+    };
+    
+    View.prototype.resetView = function () {
+        this.yAxisAngle = 0;
+        this.xAxisAngle = 0;
+        this.distance = this.imageDistance;
+    };
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         if (keyboard.wasAsciiPressed("S")) {
             if (this.stitchMode == "smart")  {
-                this.stitchMode = null;
+                this.stitchMode = "none";
             } else if (this.stitchMode == "simple") {
                 this.stitchMode = "smart";
             } else {
                 this.stitchMode = "simple";
             }
-            this.stretch = !this.stretch;
             this.showImage(this.lastImage);
         }
         
         if (keyboard.wasAsciiPressed("F")) {
             this.fill = !this.fill;
-            if (this.stitchMode != "simple") {
-                this.showImage(this.lastImage);
-            }
+            this.updateFill();
         }
         
-        if (keyboard.wasKeyPressed(IO.KEYS.Space)) {
+        if (keyboard.wasAsciiPressed("T")) {
             if (this.direction) {
                 this.direction = 0;
             } else {
                 this.direction = this.yAxisAngle < 0 ? 1 : -1;
             }
+            this.updateControls();
         }
         
         if (keyboard.wasAsciiPressed("R")) {
-            this.yAxisAngle = 0;
-            this.xAxisAngle = 0;
-            this.distance = this.imageDistance;
+            this.resetView();
         }
         
         var deltaX = 0,
@@ -68,7 +103,7 @@ var C3D = (function () {
         }
         
         if (pointer.activated()) {
-            this.direction = 0;
+            //this.direction = 0;
         } else if (this.lastOrbit && pointer.primary) {
             deltaX = pointer.primary.x - this.lastOrbit.x;
             deltaY = pointer.primary.y - this.lastOrbit.y;
@@ -87,7 +122,7 @@ var C3D = (function () {
             rate *= 0.1;
         }
         
-        if (this.direction) {
+        if (this.direction && !pointer.primary) {
             this.yAxisAngle += elapsed * rate * this.direction;
             if (Math.abs(this.yAxisAngle) > this.maxAutoAngleY && (this.direction < 0 == this.yAxisAngle < 0)) {
                 this.yAxisAngle = this.direction * this.maxAutoAngleY;
@@ -107,6 +142,12 @@ var C3D = (function () {
         }
         this.yAxisAngle = Math.min(this.maxAngleY, Math.max(-this.maxAngleY, this.yAxisAngle + deltaX * rate));
         this.xAxisAngle = Math.min(this.maxAngleX, Math.max(-this.maxAngleX, this.xAxisAngle + deltaY * rate));
+    };
+    
+    View.prototype.updateControls = function () {
+        this.fillCheckbox.checked = this.fill;
+        this.turntableCheckbox.checked = this.direction !== 0;
+        this.stitchCombo.value = this.stitchMode;
     };
     
     View.prototype.render = function (room, width, height) {
@@ -145,6 +186,8 @@ var C3D = (function () {
     };
      
     View.prototype.showImage = function(image) {
+        this.updateControls();
+        
         var scene = IMPROC.processImage(image);
         scene.cleanDepths = IMPROC.mipmapImputer(
             scene.depths, scene.width, scene.height, IMPROC.strategies.avg
@@ -236,7 +279,7 @@ var C3D = (function () {
             for (var x = 0; x <= width; x += xStride) {
 				var depth = lookupDepth(depths, scene, x, y, width, height),
                     index = mesh.index,
-                    generateTri = (generateTris && x < width) || !stitch;
+                    generateTri = (generateTris && x < width) || stitch == "none";
                 
                 if (depth === null) {
                     if (stitch == "smart") {
@@ -285,7 +328,7 @@ var C3D = (function () {
                 }
 			}
             
-            if (oldMesh && stitch) {
+            if (oldMesh && stitch != "none") {
                 oldMesh.appendVerticies(mesh);
             }
 		}
@@ -313,36 +356,91 @@ var C3D = (function () {
     window.onload = function(e) {
         MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
+            controls = document.getElementById("controls"),
+            menuButton = document.getElementById("menuButton"),
+            fileUpload = document.getElementById("fileUpload"),
+            randomButton = document.getElementById("random"),
+            resetButton = document.getElementById("reset"),
+            controlsVisible = false,
             view = new View(),
             batch = new BLIT.Batch("/captures/"),
             query = location.search,
-            image = getQueryParameter(query, "image") || "random.png";
+            image = getQueryParameter(query, "image");
         view.fill = getQueryParameter(query, "fill", "1") == "1";
-        batch.load(image, function(image) {view.showImage(image);});
-        batch.commit();
         
         MAIN.start(canvas, view);
 
         // Show the copy icon when dragging over. Seems to only work for chrome.
-        canvas.addEventListener('dragover', function(e) {
+        canvas.addEventListener("dragover", function(e) {
             e.stopPropagation();
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+            e.dataTransfer.dropEffect = "copy";
         });
-
+        
+        function loadImage(file) {
+            if (file.type.match(/image.*/)) {
+                var reader = new FileReader();
+                reader.onload = function(loadEvent) { view.loadImage(loadEvent); };
+                reader.readAsDataURL(file); // start reading the file data.
+            }
+        }
+        
+        function showRandomImage() {
+            var counts = [
+                    ["noatt", 1275],
+                    ["obj", 311],
+                    ["hats", 250],
+                    ["cap", 9400]
+                ],
+                fullList = [];
+            for (var i = 0; i < counts.length; ++i) {
+                var baseName = counts[i][0],
+                    count = counts[i][1];
+                for (var n = 1; n <= count; ++n) {
+                    fullList.push(baseName + " - " + n + ".png");
+                }
+            }
+            
+            var file = ENTROPY.makeRandom().randomElement(fullList);
+            console.log("Loading " + file);
+            
+            batch.load(encodeURIComponent(file), function(image) {view.showImage(image);});
+            batch.commit();
+        }
+        
+        if (image) {
+            batch.load(image, function(image) {view.showImage(image);});
+            batch.commit();
+        } else {
+            showRandomImage();
+        }
+        
         // Get file data on drop
-        canvas.addEventListener('drop', function(e) {
+        canvas.addEventListener("drop", function(e) {
             e.stopPropagation();
             e.preventDefault();
             var files = e.dataTransfer.files;
             if (files.length == 1) {
-                var file = files[0];
-                if (file.type.match(/image.*/)) {
-                    var reader = new FileReader();
-                    reader.onload = function(loadEvent) { view.loadImage(loadEvent); };
-                    reader.readAsDataURL(file); // start reading the file data.
-                }
+                loadImage(files[0]);
             }
+        });
+        
+        fileUpload.addEventListener("change", function(e) {
+            loadImage(fileUpload.files[0]);
+        });
+        
+        menuButton.addEventListener("click", function(e) {
+            controlsVisible = !controlsVisible;
+            var slide = controlsVisible ? " slideIn" : "";
+            controls.className = "controls" + slide;
+        });
+        
+        randomButton.addEventListener("click", function(e) {
+            showRandomImage();
+        });
+        
+        resetButton.addEventListener("click", function(e) {
+            view.resetView();
         });
     };
     
