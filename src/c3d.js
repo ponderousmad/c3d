@@ -45,13 +45,13 @@ var C3D = (function () {
         
         this.stitchCombo.addEventListener("change", function (e) {
             self.stitchMode = self.stitchCombo.value;
-            self.showImage(self.lastImage);
+            self.showImage(self.lastImage, false);
         });
     }
     
     View.prototype.updateFill = function () {
         if (this.stitchMode != "simple") {
-            this.showImage(this.lastImage);
+            this.showImage(this.lastImage, false);
         } else {
             this.updateControls();
         }
@@ -72,7 +72,7 @@ var C3D = (function () {
             } else {
                 this.stitchMode = "simple";
             }
-            this.showImage(this.lastImage);
+            this.showImage(this.lastImage, false);
         }
         
         if (keyboard.wasAsciiPressed("F")) {
@@ -180,12 +180,10 @@ var C3D = (function () {
     View.prototype.loadImage = function (event) {
         var image = new Image();
         image.src = event.target.result;
-        this.distance = 0;
-        
-        this.showImage(image);
+        this.showImage(image, true);
     };
      
-    View.prototype.showImage = function(image) {
+    View.prototype.showImage = function(image, resetDistance) {
         this.updateControls();
         
         var scene = IMPROC.processImage(image);
@@ -217,7 +215,8 @@ var C3D = (function () {
         this.center.setAt(1, 0);
         this.lastImage = image;
         this.imageDistance = this.center.z;
-        if (!this.distance) {
+        if (resetDistance) {
+            console.log("Reset distance");
             this.distance = this.imageDistance;
         }
     };
@@ -404,12 +403,12 @@ var C3D = (function () {
             var file = ENTROPY.makeRandom().randomElement(fullList);
             console.log("Loading " + file);
             
-            batch.load(encodeURIComponent(file), function(image) {view.showImage(image);});
+            batch.load(encodeURIComponent(file), function(image) {view.showImage(image, true);});
             batch.commit();
         }
         
         if (image) {
-            batch.load(image, function(image) {view.showImage(image);});
+            batch.load(image, function(image) {view.showImage(image, true);});
             batch.commit();
         } else {
             showRandomImage();
@@ -433,6 +432,8 @@ var C3D = (function () {
             controlsVisible = !controlsVisible;
             var slide = controlsVisible ? " slideIn" : "";
             controls.className = "controls" + slide;
+            e.preventDefault = true;
+            return false;
         });
         
         randomButton.addEventListener("click", function(e) {
