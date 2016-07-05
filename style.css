@@ -40,9 +40,9 @@ html, body {
 }
 
 .slideIn {
-    -webkit-transform: translate(-232px,0px);
-    -moz-transform: translate(-232px,0px);
-    -o-transform: translate(-232px,0px);
-    -ms-transform: translate(-232px,0px);
-    transform: translate(-232px,0px); 
+    -webkit-transform: translate(-225px,0px);
+    -moz-transform: translate(-225px,0px);
+    -o-transform: translate(-225px,0px);
+    -ms-transform: translate(-225px,0px);
+    transform: translate(-225px,0px); 
 }
