@@ -360,6 +360,7 @@ var C3D = (function () {
             fileUpload = document.getElementById("fileUpload"),
             randomButton = document.getElementById("random"),
             resetButton = document.getElementById("reset"),
+            resultsCombo = document.getElementById("results"),
             controlsVisible = false,
             view = new View(),
             batch = new BLIT.Batch("/captures/"),
@@ -403,7 +404,7 @@ var C3D = (function () {
             var file = ENTROPY.makeRandom().randomElement(fullList);
             console.log("Loading " + file);
             
-            batch.load(encodeURIComponent(file), function(image) {view.showImage(image, true);});
+            batch.load(encodeURIComponent(file), function(image) { view.showImage(image, true); });
             batch.commit();
         }
         
@@ -442,6 +443,14 @@ var C3D = (function () {
         
         resetButton.addEventListener("click", function(e) {
             view.resetView();
+        });
+        
+        resultsCombo.addEventListener("change", function (e) {
+            if (resultsCombo.value) {
+                var resultsBatch = new BLIT.Batch("images/");
+                resultsBatch.load(resultsCombo.value, function(image) { view.showImage(image, true); });
+                resultsBatch.commit();
+            }
         });
     };
     
