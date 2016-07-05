@@ -379,6 +379,7 @@ var C3D = (function () {
         
         function loadImage(file) {
             if (file.type.match(/image.*/)) {
+                resultsCombo.value = "";
                 var reader = new FileReader();
                 reader.onload = function(loadEvent) { view.loadImage(loadEvent); };
                 reader.readAsDataURL(file); // start reading the file data.
@@ -438,6 +439,7 @@ var C3D = (function () {
         });
         
         randomButton.addEventListener("click", function(e) {
+            resultsCombo.value = "";
             showRandomImage();
         });
         
