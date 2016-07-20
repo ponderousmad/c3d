@@ -368,6 +368,29 @@ var C3D = (function () {
             image = getQueryParameter(query, "image");
         view.fill = getQueryParameter(query, "fill", "1") == "1";
         
+        // Check for WebVR support.
+        if (navigator.getVRDisplays) {
+            navigator.getVRDisplays().then(function (displays) {
+                if (!displays.length) {
+                    console.log("WebVR supported, but no VRDisplays found.");
+                }
+                for (var d = 0; d < displays.length; ++d) {
+                    console.log("Found display:", displays[d]);
+                }
+            });
+            var eventLogger = function (event) {
+                console.log(event);
+            };
+            window.addEventListener("vrdisplayconnected", eventLogger, false);
+            window.addEventListener("vrdisplaydisconnected", eventLogger, false);
+            window.addEventListener("vrdisplayactivated", eventLogger, false);
+            window.addEventListener("vrdisplaydeactivated", eventLogger, false);
+        } else if (navigator.getVRDevices) {
+            console.log("Old WebVR version.");
+        } else {
+            console.log("WebVR not supported.");
+        }
+        
         MAIN.start(canvas, view);
 
         // Show the copy icon when dragging over. Seems to only work for chrome.
