@@ -270,6 +270,13 @@ var R3 = (function () {
         this.w = w;
     };
     
+    Q.prototype.setAll = function (values) {
+        this.x = values[0];
+        this.y = values[1];
+        this.z = values[2];
+        this.w = values[3];
+    };
+    
     function qmul(a, b, target) {
 		// from http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/code/index.htm
         var x =  a.x * b.w + a.y * b.z - a.z * b.y + a.w * b.x,

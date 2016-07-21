@@ -23,7 +23,8 @@ var C3D = (function () {
         this.iPadMiniBackCameraFOV = 56;
         this.lastImage = null;
         this.lastOrbit = null;
-        
+        this.vrDisplay = null;
+
         this.fillCheckbox = document.getElementById("fill");
         this.turntableCheckbox = document.getElementById("turntable");
         this.stitchCombo = document.getElementById("stitch");
@@ -55,6 +56,10 @@ var C3D = (function () {
         } else {
             this.updateControls();
         }
+    };
+    
+    View.prototype.setVrDisplay = function (display) {
+        this.vrDisplay = display;
     };
     
     View.prototype.resetView = function () {
@@ -167,6 +172,10 @@ var C3D = (function () {
 
         if (this.meshes !== null) {
             room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
+            if (this.vrDisplay) {
+                var pose = this.vrDisplay.getPose();
+                room.viewer.orientation.setAll(pose.orientation);
+            }
             var rotate = R3.makeRotateQ(room.viewer.orientation);
             room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
             room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
@@ -373,6 +382,11 @@ var C3D = (function () {
             navigator.getVRDisplays().then(function (displays) {
                 if (!displays.length) {
                     console.log("WebVR supported, but no VRDisplays found.");
+                }
+                else {
+                    var vrDisplay = displays[0];
+                    console.log("Found display:", vrDisplay);
+                    view.setVrDisplay(vrDisplay);
                 }
                 for (var d = 0; d < displays.length; ++d) {
                     console.log("Found display:", displays[d]);
