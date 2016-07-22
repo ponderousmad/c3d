@@ -40,7 +40,10 @@ var WGL = (function () {
         var context = null;
 
         try {
-            context = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            var glAttribs = {
+                alpha: false
+            };
+            context = canvas.getContext("webgl", glAttribs) || canvas.getContext("experimental-webgl", glAttribs);
             if (context) {
                 if (debugOptions) {
                     context = WebGLDebugUtils.makeDebugContext(context, throwOnGLError, logAndValidate);
