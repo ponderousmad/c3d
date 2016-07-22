@@ -139,7 +139,7 @@ var R3 = (function () {
     }
     
     V.prototype.copy = function () {
-        return new V(this.x, this.y, this.z, this.w);  
+        return new V(this.x, this.y, this.z, this.w);
     };
     
     V.prototype.copyTo = function (array, offset, includeW) {
