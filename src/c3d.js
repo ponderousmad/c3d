@@ -1,6 +1,6 @@
 var C3D = (function () {
     "use strict";
-    
+
     function View() {
         this.clearColor = [0, 0, 0, 1];
         this.maximize = true;
@@ -28,14 +28,14 @@ var C3D = (function () {
         this.fillCheckbox = document.getElementById("fill");
         this.turntableCheckbox = document.getElementById("turntable");
         this.stitchCombo = document.getElementById("stitch");
-        
+
         var self = this;
-        
+
         this.fillCheckbox.addEventListener("change", function (e) {
             self.fill = self.fillCheckbox.checked;
             self.updateFill();
         });
-        
+
         this.turntableCheckbox.addEventListener("change", function (e) {
             if (self.direction) {
                 self.direction = 0;
@@ -43,13 +43,13 @@ var C3D = (function () {
                 self.direction = 1;
             }
         });
-        
+
         this.stitchCombo.addEventListener("change", function (e) {
             self.stitchMode = self.stitchCombo.value;
             self.showImage(self.lastImage, false);
         });
     }
-    
+
     View.prototype.updateFill = function () {
         if (this.stitchMode != "simple") {
             this.showImage(this.lastImage, false);
@@ -57,11 +57,11 @@ var C3D = (function () {
             this.updateControls();
         }
     };
-    
+
     View.prototype.setVrDisplay = function (display) {
         this.vrDisplay = display;
     };
-    
+
     View.prototype.resetView = function () {
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
@@ -70,7 +70,7 @@ var C3D = (function () {
             this.vrDisplay.resetPose();
         }
     };
-    
+
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         if (keyboard.wasAsciiPressed("S")) {
             if (this.stitchMode == "smart")  {
@@ -82,12 +82,12 @@ var C3D = (function () {
             }
             this.showImage(this.lastImage, false);
         }
-        
+
         if (keyboard.wasAsciiPressed("F")) {
             this.fill = !this.fill;
             this.updateFill();
         }
-        
+
         if (keyboard.wasAsciiPressed("T")) {
             if (this.direction) {
                 this.direction = 0;
@@ -96,20 +96,20 @@ var C3D = (function () {
             }
             this.updateControls();
         }
-        
+
         if (keyboard.wasAsciiPressed("R")) {
             this.resetView();
         }
-        
+
         var deltaX = 0,
             deltaY = 0,
             rate = 0.0001;
-        
+
         if (pointer.wheelY) {
             var WHEEL_BASE = 1000;
             this.distance *= (WHEEL_BASE + pointer.wheelY) / WHEEL_BASE;
         }
-        
+
         if (pointer.activated()) {
             //this.direction = 0;
         } else if (this.lastOrbit && pointer.primary) {
@@ -119,17 +119,17 @@ var C3D = (function () {
                 rate = 0.0025;
             }
         }
-        
+
         if (pointer.primary) {
             this.lastOrbit = pointer.primary;
         }
-   
+
         if (keyboard.isShiftDown()) {
             rate *= 10;
         } else if(keyboard.isAltDown()) {
             rate *= 0.1;
         }
-        
+
         if (this.direction && !pointer.primary) {
             this.yAxisAngle += elapsed * rate * this.direction;
             if (Math.abs(this.yAxisAngle) > this.maxAutoAngleY && (this.direction < 0 == this.yAxisAngle < 0)) {
@@ -151,13 +151,13 @@ var C3D = (function () {
         this.yAxisAngle = Math.min(this.maxAngleY, Math.max(-this.maxAngleY, this.yAxisAngle + deltaX * rate));
         this.xAxisAngle = Math.min(this.maxAngleX, Math.max(-this.maxAngleX, this.xAxisAngle + deltaY * rate));
     };
-    
+
     View.prototype.updateControls = function () {
         this.fillCheckbox.checked = this.fill;
         this.turntableCheckbox.checked = this.direction !== 0;
         this.stitchCombo.value = this.stitchMode;
     };
-    
+
     View.prototype.render = function (room, width, height) {
         room.clear(this.clearColor);
         if (this.program === null) {
@@ -177,21 +177,28 @@ var C3D = (function () {
             var pose = this.vrDisplay.getPose(),
                 p = pose.position;
             room.viewer.orientation.setAll(pose.orientation);
-            room.viewer.position.set(p[0], p[1], p[2]);
-            room.viewer.position.add(this.center);
-            room.viewer.position.z -= this.distance;
-            if (this.meshes !== null) {
-                room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
+            room.viewer.orientation.w *= -1;
+            var eyes = ["left", "right"];
+            for (var e = 0; e < eyes.length; ++e) {
+                var eye = this.vrDisplay.getEyeParameters(eyes[e]),
+                    offset = eye.offset,
+                    scale = 10;
+                room.viewer.position.set(
+                    scale * (p[0] + offset[0]),
+                    scale * (p[1] + offset[1]),
+                    scale * (p[2] + offset[2]) - this.distance
+                );
+                room.viewer.position.add(this.center);
+                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", eye);
                 this.drawMeshes(room);
             }
             this.vrDisplay.submitFrame(pose);
-        } else {
-            room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
-            var rotate = R3.makeRotateQ(room.viewer.orientation);
-            room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
-            room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
-            this.drawMeshes(room);
         }
+        room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
+        var rotate = R3.makeRotateQ(room.viewer.orientation);
+        room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
+        room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
+        this.drawMeshes(room);
     };
 
     View.prototype.drawMeshes = function (room) {
@@ -201,32 +208,32 @@ var C3D = (function () {
             }
         }
     };
-    
+
     View.prototype.loadImage = function (event) {
         var image = new Image();
         image.src = event.target.result;
         this.showImage(image, true);
     };
-     
+
     View.prototype.showImage = function(image, resetDistance) {
         this.updateControls();
-        
+
         var scene = IMPROC.processImage(image);
         scene.cleanDepths = IMPROC.mipmapImputer(
             scene.depths, scene.width, scene.height, IMPROC.strategies.avg
         );
-        
+
         var cleanSize = IMPROC.nextPowerOfTwo(Math.max(scene.height, scene.width));
         scene.uMax = scene.width / cleanSize;
         scene.vMax = scene.height / cleanSize;
-        
+
         var canvas = document.createElement('canvas'),
             context = canvas.getContext('2d');
-    
+
         canvas.width = cleanSize;
         canvas.height = cleanSize;
         context.drawImage(image, 0, 0);
-        
+
         this.meshes = this.constructGrid(scene, this.stitchMode, this.fill);
         var bbox = new R3.AABox();
         for (var m = 0; m < this.meshes.length; ++m) {
@@ -245,7 +252,7 @@ var C3D = (function () {
             this.distance = this.imageDistance;
         }
     };
-    
+
     function calculateVertex(mesh, parameters, x, y, depth) {
         var pixel = R3.newPoint(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
         pixel.normalize();
@@ -254,16 +261,16 @@ var C3D = (function () {
         pixel.z *= parameters.depthScale;
         mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
     }
-    
+
     function addTris(mesh, index, stride) {
         mesh.addTri(index,    index + stride, index + 1);
         mesh.addTri(index + 1,index + stride, index + stride + 1);
     }
-    
+
     function lookupDepth(depths, scene, x, y, height, width) {
         return depths[Math.min(height - 1, y) * scene.width + Math.min(scene.width - 1, x)];
     }
-    
+
     View.prototype.constructGrid = function (scene, stitch, fill) {
         var height = scene.height,
             width = scene.width,
@@ -304,7 +311,7 @@ var C3D = (function () {
                 var depth = lookupDepth(depths, scene, x, y, width, height),
                     index = mesh.index,
                     generateTri = (generateTris && x < width) || stitch == "none";
-                
+
                 if (depth === null) {
                     if (stitch == "smart") {
                         depth = lookupDepth(scene.cleanDepths, scene, x, y, width, height);
@@ -313,7 +320,7 @@ var C3D = (function () {
                         continue;
                     }
                 }
-                
+
                 if (stitch=="simple") {
                     calculateVertex(mesh, parameters, x, y, depth);
                 } else {
@@ -323,7 +330,7 @@ var C3D = (function () {
                         }
                     }
                 }
-                
+
                 if (stitch == "smart") {
                     if (generateTri) {
                         var iUL = 0, iUR = 1, iDL = 2, iDR = 3;
@@ -351,7 +358,7 @@ var C3D = (function () {
                     addTris(mesh, index, indexStride);
                 }
             }
-            
+
             if (oldMesh && stitch != "none") {
                 oldMesh.appendVerticies(mesh);
             }
@@ -359,7 +366,7 @@ var C3D = (function () {
 
         return meshes;
     };
-    
+
     function getQueryParameter(query, parameter, defaultValue) {
         try {
             if (query) {
@@ -376,7 +383,7 @@ var C3D = (function () {
         }
         return defaultValue;
     }
-    
+
     window.onload = function(e) {
         MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
@@ -414,8 +421,6 @@ var C3D = (function () {
                                 canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
                             } else {
                                 view.maximize = true;
-                                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-                                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
                             }
                         },
                         requestPresentVR = function () {
@@ -472,7 +477,7 @@ var C3D = (function () {
         } else {
             console.log("WebVR not supported.");
         }
-        
+
         MAIN.start(canvas, view);
 
         // Show the copy icon when dragging over. Seems to only work for chrome.
@@ -481,7 +486,7 @@ var C3D = (function () {
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
         });
-        
+
         function loadImage(file) {
             if (file.type.match(/image.*/)) {
                 resultsCombo.value = "";
@@ -490,7 +495,7 @@ var C3D = (function () {
                 reader.readAsDataURL(file); // start reading the file data.
             }
         }
-        
+
         function showRandomImage() {
             var counts = [
                     ["noatt", 1275],
@@ -506,21 +511,21 @@ var C3D = (function () {
                     fullList.push(baseName + " - " + n + ".png");
                 }
             }
-            
+
             var file = ENTROPY.makeRandom().randomElement(fullList);
             console.log("Loading " + file);
-            
+
             batch.load(encodeURIComponent(file), function(image) { view.showImage(image, true); });
             batch.commit();
         }
-        
+
         if (image) {
             batch.load(image, function(image) {view.showImage(image, true);});
             batch.commit();
         } else {
             showRandomImage();
         }
-        
+
         // Get file data on drop
         canvas.addEventListener("drop", function(e) {
             e.stopPropagation();
@@ -530,11 +535,11 @@ var C3D = (function () {
                 loadImage(files[0]);
             }
         });
-        
+
         fileUpload.addEventListener("change", function(e) {
             loadImage(fileUpload.files[0]);
         });
-        
+
         menuButton.addEventListener("click", function(e) {
             controlsVisible = !controlsVisible;
             var slide = controlsVisible ? " slideIn" : "";
@@ -542,16 +547,16 @@ var C3D = (function () {
             e.preventDefault = true;
             return false;
         });
-        
+
         randomButton.addEventListener("click", function(e) {
             resultsCombo.value = "";
             showRandomImage();
         });
-        
+
         resetButton.addEventListener("click", function(e) {
             view.resetView();
         });
-        
+
         resultsCombo.addEventListener("change", function (e) {
             if (resultsCombo.value) {
                 var resultsBatch = new BLIT.Batch("images/");
@@ -560,7 +565,7 @@ var C3D = (function () {
             }
         });
     };
-    
+
     return {
     };
 }());

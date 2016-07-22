@@ -74,8 +74,6 @@ var MAIN = (function () {
             }
 
             resizeCanvas(canvas, game);
-            
-            room.updateSize();
             game.render(room, canvas.width, canvas.height);
         }
 
@@ -153,6 +151,8 @@ var MAIN = (function () {
         Test2D: Test2D,
         Test3D: Test3D,
         runTestSuites: runTestSuites,
-        start: start
+        start: start,
+        safeHeight: safeHeight,
+        safeWidth: safeWidth,
     };
 }());
