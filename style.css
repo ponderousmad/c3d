@@ -4,6 +4,7 @@ html, body {
     margin: 0px;
     max-width: 100%;
     overflow-x: hidden;
+    overflow-y: hidden;
 }
 
 .controls {
@@ -33,7 +34,7 @@ html, body {
 }
 
 .hamburger {
-    border-bottom: 17px double black; 
+    border-bottom: 17px double black;
     border-top: 6px solid black;
     height: 5px; 
     width: 30px;
