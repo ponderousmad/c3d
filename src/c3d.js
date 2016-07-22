@@ -66,6 +66,9 @@ var C3D = (function () {
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
         this.distance = this.imageDistance;
+        if (this.vrDisplay) {
+            this.vrDisplay.resetPose();
+        }
     };
     
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
@@ -170,18 +173,31 @@ var C3D = (function () {
             room.gl.enable(room.gl.CULL_FACE);
         }
 
-        if (this.meshes !== null) {
-            room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
-            if (this.vrDisplay) {
-                var pose = this.vrDisplay.getPose();
-                room.viewer.orientation.setAll(pose.orientation);
+        if (this.vrDisplay && this.vrDisplay.isPresenting) {
+            var pose = this.vrDisplay.getPose(),
+                p = pose.position;
+            room.viewer.orientation.setAll(pose.orientation);
+            room.viewer.position.set(p[0], p[1], p[2]);
+            room.viewer.position.add(this.center);
+            room.viewer.position.z -= this.distance;
+            if (this.meshes !== null) {
+                room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
+                this.drawMeshes(room);
             }
+            this.vrDisplay.submitFrame(pose);
+        } else {
+            room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
             var rotate = R3.makeRotateQ(room.viewer.orientation);
             room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
             room.setupView(this.program.shader, "uMVMatrix", "uPMatrix");
+            this.drawMeshes(room);
+        }
+    };
 
+    View.prototype.drawMeshes = function (room) {
+        if (this.meshes !== null) {
             for (var m = 0; m < this.meshes.length; ++m) {
-                room.drawMesh(this.meshes[m], this.program);   
+                room.drawMesh(this.meshes[m], this.program);
             }
         }
     };
@@ -285,7 +301,7 @@ var C3D = (function () {
                 meshes.push(mesh);
             }
             for (var x = 0; x <= width; x += xStride) {
-				var depth = lookupDepth(depths, scene, x, y, width, height),
+                var depth = lookupDepth(depths, scene, x, y, width, height),
                     index = mesh.index,
                     generateTri = (generateTris && x < width) || stitch == "none";
                 
@@ -334,13 +350,13 @@ var C3D = (function () {
                 } else if (generateTri) {
                     addTris(mesh, index, indexStride);
                 }
-			}
+            }
             
             if (oldMesh && stitch != "none") {
                 oldMesh.appendVerticies(mesh);
             }
-		}
-        
+       }
+
         return meshes;
     };
     
@@ -376,29 +392,81 @@ var C3D = (function () {
             query = location.search,
             image = getQueryParameter(query, "image");
         view.fill = getQueryParameter(query, "fill", "1") == "1";
-        
+
         // Check for WebVR support.
         if (navigator.getVRDisplays) {
             navigator.getVRDisplays().then(function (displays) {
                 if (!displays.length) {
                     console.log("WebVR supported, but no VRDisplays found.");
-                }
-                else {
+                } else {
                     var vrDisplay = displays[0];
                     console.log("Found display:", vrDisplay);
                     view.setVrDisplay(vrDisplay);
-                }
-                for (var d = 0; d < displays.length; ++d) {
-                    console.log("Found display:", displays[d]);
+
+                    var enterVrButton = document.getElementById("enterVR"),
+                        exitVrButton = document.getElementById("exitVR"),
+                        onResize = function () {
+                            if (vrDisplay.isPresenting) {
+                                view.maximize = false;
+                                var leftEye = vrDisplay.getEyeParameters("left");
+                                var rightEye = vrDisplay.getEyeParameters("right");
+                                canvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+                                canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+                            } else {
+                                view.maximize = true;
+                                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                            }
+                        },
+                        requestPresentVR = function () {
+                            // This can only be called in response to a user gesture.
+                            vrDisplay.requestPresent([{ source: canvas }]).then(
+                                function () { console.log("Started present."); },
+                                function () { console.log("Request present failed."); }
+                            );
+                        },
+                        requestExitVR = function () {
+                            if (!vrDisplay.isPresenting) {
+                                // (May get vrdisplaydeactivated when not presenting.)
+                                return;
+                            }
+                            vrDisplay.exitPresent().then(
+                                function () { },
+                                 function () { }
+                            );
+                        },
+                        onPresentChange = function () {
+                            onResize();
+                            if (vrDisplay.isPresenting) {
+                                if (vrDisplay.capabilities.hasExternalDisplay) {
+                                    exitVrButton.className = "";
+                                    enterVrButton.className = "hidden";
+                                }
+                            } else {
+                                if (vrDisplay.capabilities.hasExternalDisplay) {
+                                    exitVrButton.className = "hidden";
+                                    enterVrButton.className = "";
+                                }
+                            }
+                        };
+
+                    if (vrDisplay.capabilities.canPresent) {
+                        enterVrButton.className = "";
+                    }
+
+                    enterVrButton.addEventListener("click", requestPresentVR, false);
+                    exitVrButton.addEventListener("click", requestExitVR, false);
+
+                    window.addEventListener("vrdisplayactivated", requestPresentVR, false);
+                    window.addEventListener("vrdisplaydeactivated", requestExitVR, false);
+                    window.addEventListener('vrdisplaypresentchange', onPresentChange, false);
+                    window.addEventListener("resize", onResize, false);
+                    onResize();
                 }
             });
             var eventLogger = function (event) {
                 console.log(event);
             };
-            window.addEventListener("vrdisplayconnected", eventLogger, false);
-            window.addEventListener("vrdisplaydisconnected", eventLogger, false);
-            window.addEventListener("vrdisplayactivated", eventLogger, false);
-            window.addEventListener("vrdisplaydeactivated", eventLogger, false);
         } else if (navigator.getVRDevices) {
             console.log("Old WebVR version.");
         } else {

@@ -61,14 +61,18 @@ var MAIN = (function () {
     
     function setup3D(canvas, game, update) {
         var room = new WGL.Room(canvas);
-        
+
         function drawFrame3D() {
-            requestAnimationFrame(drawFrame3D);
-            
+            if (game.vrDisplay) {
+                game.vrDisplay.requestAnimationFrame(drawFrame3D);
+            } else {
+                requestAnimationFrame(drawFrame3D);
+            }
+
             if (update) {
                 update();
             }
-            
+
             resizeCanvas(canvas, game);
             
             room.updateSize();

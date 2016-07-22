@@ -46,3 +46,7 @@ html, body {
     -ms-transform: translate(-225px,0px);
     transform: translate(-225px,0px); 
 }
+
+.hidden {
+    display: none;
+}
