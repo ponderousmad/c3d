@@ -403,10 +403,10 @@ var R3 = (function () {
     // Perspective matrix for VR FOV
     // From https://github.com/toji/gl-matrix/blob/master/src/gl-matrix/mat4.js
     function perspectiveFOV(fov, near, far) {
-        var right = Math.tan(fov.rightDegrees * r2.DEG_TO_RAD),
-            left  = Math.tan(fov.leftDegrees  * r2.DEG_TO_RAD),
-            up    = Math.tan(fov.upDegrees    * r2.DEG_TO_RAD),
-            down  = Math.tan(fov.downDegrees  * r2.DEG_TO_RAD),
+        var right = Math.tan(fov.rightDegrees * R2.DEG_TO_RAD),
+            left  = Math.tan(fov.leftDegrees  * R2.DEG_TO_RAD),
+            up    = Math.tan(fov.upDegrees    * R2.DEG_TO_RAD),
+            down  = Math.tan(fov.downDegrees  * R2.DEG_TO_RAD),
             xRange = right - left,
             yRange = up - down,
             xScale = 1.0 / (right + left),
