@@ -29,6 +29,8 @@ var C3D = (function () {
         this.turntableCheckbox = document.getElementById("turntable");
         this.stitchCombo = document.getElementById("stitch");
 
+        this.batch = new BLIT.Batch("/captures/");
+
         var self = this;
 
         this.fillCheckbox.addEventListener("change", function (e) {
@@ -246,6 +248,36 @@ var C3D = (function () {
         }
     };
 
+    View.prototype.batchLoadImage = function (image) {
+        var self = this;
+        this.batch.load(image, function(image) { self.showImage(image, true); });
+        this.batch.commit();
+    };
+
+    View.prototype.showRandomImage = function () {
+        var counts = [
+                ["noatt", 1275],
+                ["obj", 311],
+                ["hats", 250],
+                ["cap", 9400]
+            ],
+            fullList = [];
+        for (var i = 0; i < counts.length; ++i) {
+            var baseName = counts[i][0],
+                count = counts[i][1];
+            for (var n = 1; n <= count; ++n) {
+                fullList.push(baseName + " - " + n + ".png");
+            }
+        }
+
+        var file = ENTROPY.makeRandom().randomElement(fullList);
+        console.log("Loading " + file);
+        var self = this;
+
+        this.batch.load(encodeURIComponent(file), function(image) { self.showImage(image, true); });
+        this.batch.commit();
+    };
+
     function calculateVertex(mesh, parameters, x, y, depth) {
         var pixel = R3.newPoint(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
         pixel.normalize();
@@ -379,22 +411,7 @@ var C3D = (function () {
         return defaultValue;
     }
 
-    window.onload = function(e) {
-        MAIN.runTestSuites();
-        var canvas = document.getElementById("canvas3D"),
-            controls = document.getElementById("controls"),
-            menuButton = document.getElementById("menuButton"),
-            fileUpload = document.getElementById("fileUpload"),
-            randomButton = document.getElementById("random"),
-            resetButton = document.getElementById("reset"),
-            resultsCombo = document.getElementById("results"),
-            controlsVisible = false,
-            view = new View(),
-            batch = new BLIT.Batch("/captures/"),
-            query = location.search,
-            image = getQueryParameter(query, "image");
-        view.fill = getQueryParameter(query, "fill", "1") == "1";
-
+    function setupVrSupport(canvas, view) {
         // Check for WebVR support.
         if (navigator.getVRDisplays) {
             navigator.getVRDisplays().then(function (displays) {
@@ -432,7 +449,7 @@ var C3D = (function () {
                             }
                             vrDisplay.exitPresent().then(
                                 function () { },
-                                 function () { }
+                                function () { }
                             );
                         },
                         onPresentChange = function () {
@@ -464,14 +481,29 @@ var C3D = (function () {
                     onResize();
                 }
             });
-            var eventLogger = function (event) {
-                console.log(event);
-            };
         } else if (navigator.getVRDevices) {
             console.log("Old WebVR version.");
         } else {
             console.log("WebVR not supported.");
         }
+    }
+
+    window.onload = function(e) {
+        MAIN.runTestSuites();
+        var canvas = document.getElementById("canvas3D"),
+            controls = document.getElementById("controls"),
+            menuButton = document.getElementById("menuButton"),
+            fileUpload = document.getElementById("fileUpload"),
+            randomButton = document.getElementById("random"),
+            resetButton = document.getElementById("reset"),
+            resultsCombo = document.getElementById("results"),
+            controlsVisible = false,
+            view = new View(),
+            query = location.search,
+            image = getQueryParameter(query, "image");
+        view.fill = getQueryParameter(query, "fill", "1") == "1";
+
+        setupVrSupport(canvas, view);
 
         MAIN.start(canvas, view);
 
@@ -491,34 +523,10 @@ var C3D = (function () {
             }
         }
 
-        function showRandomImage() {
-            var counts = [
-                    ["noatt", 1275],
-                    ["obj", 311],
-                    ["hats", 250],
-                    ["cap", 9400]
-                ],
-                fullList = [];
-            for (var i = 0; i < counts.length; ++i) {
-                var baseName = counts[i][0],
-                    count = counts[i][1];
-                for (var n = 1; n <= count; ++n) {
-                    fullList.push(baseName + " - " + n + ".png");
-                }
-            }
-
-            var file = ENTROPY.makeRandom().randomElement(fullList);
-            console.log("Loading " + file);
-
-            batch.load(encodeURIComponent(file), function(image) { view.showImage(image, true); });
-            batch.commit();
-        }
-
         if (image) {
-            batch.load(image, function(image) {view.showImage(image, true);});
-            batch.commit();
+            view.batchLoadImage(image);
         } else {
-            showRandomImage();
+            view.showRandomImage();
         }
 
         // Get file data on drop
