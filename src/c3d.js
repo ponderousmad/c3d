@@ -180,15 +180,8 @@ var C3D = (function () {
             room.viewer.orientation.w *= -1;
             var eyes = ["left", "right"];
             for (var e = 0; e < eyes.length; ++e) {
-                var eye = this.vrDisplay.getEyeParameters(eyes[e]),
-                    offset = eye.offset,
-                    scale = 1;
-                room.viewer.position.set(
-                    scale * (p[0] + offset[0]),
-                    scale * (p[1] + offset[1]),
-                    scale * (p[2] + offset[2]) - this.distance
-                );
-                room.viewer.position.add(this.center);
+                var eye = this.vrDisplay.getEyeParameters(eyes[e]);
+                room.viewer.position.set(p[0], p[1], p[2] - this.distance + this.center.z);
                 room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", eye);
                 this.drawMeshes(room);
             }
