@@ -1,9 +1,9 @@
 var TEST = (function () {
     "use strict";
-    
+
     var TEST = {},
         catchExceptions = false;
-    
+
     TEST.contains = function (list, item) {
         for (var i = 0; i < list.length; ++i) {
             if (list[i] == item) {
@@ -12,15 +12,15 @@ var TEST = (function () {
         }
         return false;
     };
-    
+
     function AssertException(message) {
         this.message = message;
     }
-    
+
     AssertException.prototype.toString = function() {
         return this.message;
     };
-    
+
     function fail() { throw new AssertException("Assertion Failure"); }
     TEST.fail = fail;
     TEST.isTrue = function (value) { if (!value) { fail(); } };
@@ -34,7 +34,7 @@ var TEST = (function () {
     TEST.isEmpty = function (list) { TEST.equals(list.length, 0); };
     TEST.inList = function (list, item) { return TEST.isTrue(TEST.contains(list, item)); };
     TEST.tolEquals = function (a, b, tolerance) { TEST.isTrue(Math.abs(a-b) < (tolerance ? tolerance : 1e-6)); };
-    
+
     TEST.run  = function (name, tests) {
         console.log("Running " + name + " Tests");
         if (!Array.isArray(tests)) {
@@ -54,8 +54,8 @@ var TEST = (function () {
             }
         }
     };
-    
+
     TEST.INCLUDE_SLOW = false;
-    
+
     return TEST;
 }());

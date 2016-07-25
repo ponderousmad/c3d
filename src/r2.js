@@ -396,57 +396,57 @@ var R2 = (function () {
 
                 TEST.equals(v.x, 0);
                 TEST.equals(v.y, 0);
-                
+
                 var ones = new V(1, 1);
-                
+
                 TEST.equals(ones.x, 1);
                 TEST.equals(ones.y, 1);
             },
-            
+
             function testLength() {
                 var v = new V(3, 4);
                 TEST.tolEquals(v.lengthSq(), 25);
                 TEST.tolEquals(v.length(), 5);
             },
-            
+
             function testNormalize() {
                 var v = new V(1, 0);
-                
+
                 v.normalize();
-                
+
                 TEST.equals(v.x, 1);
                 TEST.equals(v.y, 0);
-                
+
                 var a = new V(1, 1),
                     n = a.normalized();
-                
+
                 TEST.equals(a.x, 1);
                 TEST.equals(a.y, 1);
-                
+
                 TEST.tolEquals(n.x, 1 / Math.sqrt(2));
                 TEST.tolEquals(n.y, 1 / Math.sqrt(2));
             },
-            
+
             function testScale() {
                 var v = new V(1, -2);
                 v.scale(-2);
                 TEST.equals(v.x, -2);
                 TEST.equals(v.y, 4);
             },
-            
+
             function testCopy() {
                 var v = new V(1, -2),
                     w = v.clone();
-                
+
                 TEST.equals(v.x, w.x);
                 TEST.equals(v.y, w.y);
-                
+
                 w.set(0, 0);
                 TEST.equals(w.x, 0);
                 TEST.equals(w.y, 0);
                 TEST.notEquals(v.x, w.x);
                 TEST.notEquals(v.y, w.y);
-                
+
                 v.copy(w);
                 TEST.equals(v.x, 0);
                 TEST.equals(v.y, 0);
