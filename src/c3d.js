@@ -103,6 +103,10 @@ var C3D = (function () {
             this.resetView();
         }
 
+        if (keyboard.wasKeyPressed(IO.KEYS.Space)) {
+            this.showRandomImage();
+        }
+
         var deltaX = 0,
             deltaY = 0,
             rate = 0.0001;
