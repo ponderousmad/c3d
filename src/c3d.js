@@ -168,7 +168,7 @@ var C3D = (function () {
                 vertexUV: room.bindVertexAttribute(shader, "aUV"),
                 textureVariable: "uSampler"
             };
-            room.viewer.far = 100000;
+            room.viewer.far = 20;
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
@@ -182,7 +182,7 @@ var C3D = (function () {
             for (var e = 0; e < eyes.length; ++e) {
                 var eye = this.vrDisplay.getEyeParameters(eyes[e]),
                     offset = eye.offset,
-                    scale = 10;
+                    scale = 1;
                 room.viewer.position.set(
                     scale * (p[0] + offset[0]),
                     scale * (p[1] + offset[1]),
@@ -258,7 +258,8 @@ var C3D = (function () {
         pixel.normalize();
         var normal = pixel.copy();
         pixel.scale(depth);
-        pixel.z *= parameters.depthScale;
+        pixel.x *= parameters.pixelScale;
+        pixel.y *= parameters.pixelScale;
         mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
     }
 
@@ -278,18 +279,19 @@ var C3D = (function () {
             yStride = 1,
             rowIndexWidth = 1 + (width / xStride),
             indexStride = stitch == "simple" ? rowIndexWidth : 2,
-            depthScale = 2 / scene.width,
-            halfFOV = (this.iPadMiniBackCameraFOV * depthScale/ 2) * R2.DEG_TO_RAD,
+            depthScale = 1,
+            pixelFOV = this.iPadMiniBackCameraFOV * R2.DEG_TO_RAD / scene.width,
             parameters = {
                 xOffset: - width / 2,
                 yOffset: height / 2,
                 depthScale: depthScale,
                 uScale: scene.uMax / scene.width,
                 vScale: scene.vMax / height,
-                planeDistance: 1 / (depthScale * Math.tan(halfFOV))
+                planeDistance: scene.width / (2.0 * Math.tan(pixelFOV)),
+                pixelScale: scene.width * 0.5
             },
             MAX_INDEX = Math.pow(2, 16),
-            SMART_STITCH_MAX_DIFFERENCE = 150,
+            SMART_STITCH_MAX_DIFFERENCE = 0.15,
             SMART_STITCH_DIFFERENCE_THRESHOLD = 0.05,
             pixelIndexStride = (stitch == "simple" ? 1 : 4),
             vertexCount = pixelIndexStride * (height + 1) * (width + 1),
