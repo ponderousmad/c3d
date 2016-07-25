@@ -557,7 +557,7 @@ var C3D = (function () {
 
         randomButton.addEventListener("click", function(e) {
             resultsCombo.value = "";
-            showRandomImage();
+            view.showRandomImage();
         });
 
         resetButton.addEventListener("click", function(e) {
