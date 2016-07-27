@@ -6,6 +6,10 @@ var R3 = (function () {
         return i + j * D4;
     }
 
+    function clamp(v, min, max) {
+        return Math.max(Math.min(v, max), min);
+    }
+
     function M(values) {
         if (!values) {
             values = [
@@ -50,6 +54,20 @@ var R3 = (function () {
         this.m[at(0,0)] *= v.x;
         this.m[at(1,1)] *= v.y;
         this.m[at(2,2)] *= v.z;
+    };
+
+    M.prototype.extractEuler = function () {
+        var m02 = this.m[at(0, 2)],
+            y = Math.asin(clamp(m02, -1, 1));
+
+        if (Math.abs(m02) < 0.9999) {
+            return new V(
+                Math.atan2(-this.m[at(1, 2)], this.m[at(2, 2)]),
+                y,
+                Math.atan2(-this.m[at(0, 1)], this.m[at(0, 0)])
+            );
+        }
+        return new V(Math.atan2(this.m[at(2, 1)], this.m[at(1, 1)]), y, 0.0);
     };
 
     function makeRotateX(theta) {
@@ -256,7 +274,10 @@ var R3 = (function () {
         this.x = x || 0;
         this.y = y || 0;
         this.z = z || 0;
-        this.w = w || 0;
+        if (w === 1) {
+            w = 0;
+        }
+        this.w = w || Math.sqrt(1 - (this.x * this.x + this.y * this.y + this.z * this.z));
     }
 
     Q.prototype.copy = function () {
@@ -310,7 +331,7 @@ var R3 = (function () {
         return new Q(axis.x * s, axis.y * s, axis.z * s, Math.cos(angle/2));
     }
 
-    function eulerQ(x, y, z) {
+    function eulerToQ(x, y, z) {
         var cosX = Math.cos(x / 2),    cosY = Math.cos(y / 2),    cosZ = Math.cos(z / 2),
             sinX = Math.sin(x / 2),    sinY = Math.sin(y / 2),    sinZ = Math.sin(z / 2);
 
@@ -334,6 +355,10 @@ var R3 = (function () {
             xz + wy,         yz - wx,         1 - ( xx + yy ), 0,
             0,               0,               0,               1
         ]);
+    }
+
+    function qToEuler(q) {
+        return makeRotateQ(q).extractEuler();
     }
 
     var AABox = function () {
@@ -511,7 +536,8 @@ var R3 = (function () {
         matmul: matmul,
         qmul: qmul,
         angleAxisQ: angleAxisQ,
-        eulerQ: eulerQ,
+        eulerToQ: eulerToQ,
+        qToEuler: qToEuler,
         pointDistanceSq: pointDistanceSq,
         pointDistance: pointDistance,
         addVectors: addVectors,

@@ -193,7 +193,7 @@ var C3D = (function () {
             }
             this.vrDisplay.submitFrame(pose);
         }
-        room.viewer.orientation = R3.eulerQ(this.xAxisAngle, this.yAxisAngle, 0);
+        room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
         var rotate = R3.makeRotateQ(room.viewer.orientation);
         room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
         room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
