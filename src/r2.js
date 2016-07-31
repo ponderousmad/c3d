@@ -71,6 +71,13 @@ var R2 = (function () {
         return this.x * v.x + this.y * v.y;
     };
 
+    V.prototype.interpolate = function (v, p) {
+        return new V(
+            this.x * (1 - p) + v.x * p,
+            this.y * (1 - p) + v.y * p
+        );
+    };
+
     V.prototype.toString = function () {
         return "(" + this.x + ", " + this.y + ")";
     };
