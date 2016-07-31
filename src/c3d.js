@@ -238,12 +238,23 @@ var C3D = (function () {
         scene.vMax = scene.height / cleanSize;
 
         var canvas = document.createElement('canvas'),
-            context = canvas.getContext('2d');
+            context = canvas.getContext('2d'),
+            thirdWidth = cleanSize / 3,
+            compassHeight = 50;
 
         canvas.width = cleanSize;
         canvas.height = cleanSize;
         context.fillStyle = "white";
         context.fillRect(0, 0, cleanSize, cleanSize);
+
+        // Compass textures.
+        context.fillStyle = "red";
+        context.fillRect(0, cleanSize - compassHeight, thirdWidth, compassHeight);
+        context.fillStyle = "green";
+        context.fillRect(thirdWidth, cleanSize - compassHeight, thirdWidth, compassHeight);
+        context.fillStyle = "blue";
+        context.fillRect(thirdWidth * 2, cleanSize - compassHeight, thirdWidth, compassHeight);
+
         context.drawImage(image, 0, 0);
 
         this.meshes = this.constructGrid(scene, this.stitchMode, this.fill);
@@ -415,40 +426,59 @@ var C3D = (function () {
 
     View.prototype.constructCompass = function () {
         var mesh = new WGL.Mesh(),
-            attitudeM = R3.makeRotateQ(this.attitude.inverse()),
+            attitudeM = R3.makeRotateQ(this.attitude),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
-            yToZ = R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0)),
-            xToY = R3.angleAxisQ(Math.PI * 0.5, new R3.V(0, 0, 1)),
             points = [
                 new R3.V(-0.01, 0, -0.01),
                 new R3.V(-0.01, 0,  0.01),
                 new R3.V( 0.01, 0,  0.01),
                 new R3.V( 0.01, 0, -0.01),
                 new R3.V( 0.00, 1,  0.00)
+            ],
+            tris = [
+                [0, 3, 1],
+                [3, 2, 1],
+                [0, 1, 4],
+                [1, 2, 4],
+                [2, 3, 4],
+                [3, 0, 4]
+            ],
+            uvs = [
+                [0.00, 0.00],
+                [0.00, 0.01],
+                [0.01, 0.01],
+                [0.01, 0.00],
+                [0.005,0.005]
+            ],
+            uOffsets = [0.1, 0.5, 0.9],
+            vOffset = 0.98,
+            axes = [
+                R3.angleAxisQ(Math.PI * 0.5, new R3.V(0, 0, 1)),
+                new R3.Q(),
+                R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0))
             ];
 
-        console.log(yToZ);
-        attitudeM = R3.matmul(R3.makeRotateQ(xToY), attitudeM);
-        attitudeM = R3.matmul(attitudeM, R3.makeRotateQ(yToZ));
+        for (var a = 0; a < axes.length; ++a) {
+            var transform = R3.matmul(R3.makeRotateQ(axes[a]), attitudeM);
 
-        up = attitudeM.transformV(up);
-        down = attitudeM.transformV(down);
-        for (var p = 0; p < points.length; ++p) {
-            points[p] = attitudeM.transformV(points[p]);
+            up = transform.transformV(up);
+            down = transform.transformV(down);
+            for (var p = 0; p < points.length; ++p) {
+                var point = transform.transformV(points[p]),
+                    u = uvs[p][0] + uOffsets[a],
+                    v = uvs[p][1] + vOffset;
+                mesh.addVertex(point, p == 4 ? up : down, u, v);
+            }
+            var iOffset = a * points.length;
+            for (var t = 0; t < tris.length; ++t) {
+                mesh.addTri(
+                    tris[t][0] + iOffset,
+                    tris[t][1] + iOffset,
+                    tris[t][2] + iOffset
+                );
+            }
         }
-
-        mesh.addVertex(points[0], down, 0.99, 0.99);
-        mesh.addVertex(points[1], down, 0.99, 1.00);
-        mesh.addVertex(points[2], down, 1.00, 1.00);
-        mesh.addVertex(points[3], down, 1.00, 0.99);
-        mesh.addVertex(points[4], up,   0.995,0.995);
-        mesh.addTri(0, 3, 1);
-        mesh.addTri(3, 2, 1);
-        mesh.addTri(0, 1, 4);
-        mesh.addTri(1, 2, 4);
-        mesh.addTri(2, 3, 4);
-        mesh.addTri(3, 0, 4);
         return mesh;
     };
 
