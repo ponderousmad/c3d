@@ -324,6 +324,16 @@ var R3 = (function () {
         this.w /= squareSum;
     };
 
+    Q.prototype.inverse = function () {
+        var squareSum = this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
+        return new Q(
+            this.x /= -squareSum,
+            this.y /= -squareSum,
+            this.z /= -squareSum,
+            this.w /= squareSum
+        );
+    };
+
     function angleAxisQ(angle, axis) {
         // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/index.htm
         // assumes axis is normalized
