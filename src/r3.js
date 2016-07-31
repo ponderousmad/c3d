@@ -324,7 +324,7 @@ var R3 = (function () {
         this.w /= squareSum;
     };
 
-    function angleAxisQ(axis, angle) {
+    function angleAxisQ(angle, axis) {
         // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/index.htm
         // assumes axis is normalized
         var s = Math.sin(angle/2);
