@@ -134,7 +134,7 @@ var R3 = (function () {
     }
 
     M.prototype.times = function (other) {
-        return matmul(this, other);
+        return matmul(this, other, this);
     };
 
     M.prototype.transformV = function (v) {
