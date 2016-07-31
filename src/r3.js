@@ -274,10 +274,10 @@ var R3 = (function () {
         this.x = x || 0;
         this.y = y || 0;
         this.z = z || 0;
-        if (w === 1) {
-            w = 0;
+        if (!w || w === 1) {
+            w = Math.sqrt(1 - (this.x * this.x + this.y * this.y + this.z * this.z));
         }
-        this.w = w || Math.sqrt(1 - (this.x * this.x + this.y * this.y + this.z * this.z));
+        this.w = w || 1;
     }
 
     Q.prototype.copy = function () {
