@@ -94,6 +94,11 @@ var C3D = (function () {
 
         if (keyboard.wasAsciiPressed("C")) {
             this.showCompass = !this.showCompass;
+            if (this.showCompass && this.meshes) {
+                this.meshes.pop();
+                this.attitude.w *= -1;
+                this.meshes.push(this.constructCompass());
+            }
         }
 
         if (keyboard.wasAsciiPressed("T")) {
@@ -410,9 +415,11 @@ var C3D = (function () {
 
     View.prototype.constructCompass = function () {
         var mesh = new WGL.Mesh(),
-            attitudeM = R3.makeRotateQ(this.attitude),
+            attitudeM = R3.makeRotateQ(this.attitude.inverse()),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
+            yToZ = R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0)),
+            xToY = R3.angleAxisQ(Math.PI * 0.5, new R3.V(0, 0, 1)),
             points = [
                 new R3.V(-0.01, 0, -0.01),
                 new R3.V(-0.01, 0,  0.01),
@@ -420,6 +427,10 @@ var C3D = (function () {
                 new R3.V( 0.01, 0, -0.01),
                 new R3.V( 0.00, 1,  0.00)
             ];
+
+        console.log(yToZ);
+        attitudeM = R3.matmul(R3.makeRotateQ(xToY), attitudeM);
+        attitudeM = R3.matmul(attitudeM, R3.makeRotateQ(yToZ));
 
         up = attitudeM.transformV(up);
         down = attitudeM.transformV(down);
