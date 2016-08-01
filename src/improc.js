@@ -2,7 +2,8 @@ var IMPROC = (function () {
     "use strict";
 
     var CHANNELS = 4,
-        R = 0, G = 1, B = 2, A = 3;
+        R = 0, G = 1, B = 2, A = 3,
+        BYTE_MAX = 255;
 
 
     function pixelAt(pixels, offset) {
@@ -18,24 +19,50 @@ var IMPROC = (function () {
         return true;
     }
 
+    function byteToUnitValue(value) {
+        return ((2.0 * value) / BYTE_MAX) - 1;
+    }
+
     function decodeDepth(pixels, width, height) {
-        var BYTE_MAX = 255,
-            CHANNEL_MAX = 8,
+        var CHANNEL_MAX = 8,
             MAX_RED_VALUE = BYTE_MAX - CHANNEL_MAX,
             CHANNELS_MAX = CHANNEL_MAX * CHANNEL_MAX,
-            orientation = [0, 0, 0, 1],
+            attitude = {
+                quaternion: new R3.Q(),
+                euler: new R3.V(),
+                matrix: R3.identity()
+            },
             depths = [],
             skip = 0,
             mmToMeter = 1.0 / 1000.0;
 
         if (pixelsEqual(pixelAt(pixels, 0), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, CHANNELS);
-            for (var o = 0; o < orientation.length; ++o) {
-                orientation[o] = ((2.0 * pixel[o]) / BYTE_MAX) - 1;
+            var pixel = pixelAt(pixels, CHANNELS),
+                q = [];
+            for (var o = 0; o < 4; ++o) {
+                q.push(byteToUnitValue(pixel[o]));
             }
-            console.log("Found attitude:", orientation);
-            skip = 2;
+            attitude.quaternion = new R3.Q(q[0], q[1], q[2], q[3]);
+            skip += 2;
         }
+        if (pixelsEqual(pixelAt(pixels, 2), [BYTE_MAX, 0, 0, BYTE_MAX])) {
+            var pixel = pixelAt(pixels, 3 * CHANNELS);
+            for (var e = 0; e < 3; ++e) {
+                attitude.euler.setAt(Math.PI * byteToUnitValue(pixel[e]));
+            }
+
+            for (var row = 0; row < 3; ++row) {
+                pixel = pixelAt(pixels, (4 + row) * CHANNELS);
+                for (var column = 0; column < 3; ++column) {
+                    attitude.matrix.setAt(row, column, byteToUnitValue(pixel[column]));
+                }
+            }
+            skip += 5;
+        } else {
+            attitude.matrix = R3.makeRotateQ(attitude.quaternion);
+            attitude.euler = attitude.matrix.extractEuler();
+        }
+        console.log("Attitude:", attitude);
         for (var y = 0; y < height; ++y) {
             for (var x = 0; x < width; ++x) {
                 var i = (y * width + x) * CHANNELS;
@@ -52,7 +79,7 @@ var IMPROC = (function () {
                 }
             }
         }
-        return { depths: depths, width: width, height: height, attitude: orientation };
+        return { depths: depths, width: width, height: height, attitude: attitude };
     }
 
     function processImage(image) {

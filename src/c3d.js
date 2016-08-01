@@ -18,7 +18,7 @@ var C3D = (function () {
         this.distance = 0;
         this.imageDistance = 0;
         this.center = R3.origin();
-        this.attitude = new R3.Q();
+        this.attitude = null;
         this.showCompass = false;
         this.fill = true;
         this.stitchMode = "smart";
@@ -96,7 +96,9 @@ var C3D = (function () {
             this.showCompass = !this.showCompass;
             if (this.showCompass && this.meshes) {
                 this.meshes.pop();
-                this.attitude.w *= -1;
+                if (this.attitude) {
+                    this.attitude.quaternion.w *= -1;
+                }
                 this.meshes.push(this.constructCompass());
             }
         }
@@ -264,7 +266,7 @@ var C3D = (function () {
             mesh.image = canvas;
             bbox.envelope(mesh.bbox);
         }
-        this.attitude = new R3.Q(scene.attitude[0], scene.attitude[1], scene.attitude[2]);
+        this.attitude = scene.attitude;
         this.center = bbox.center();
         console.log(bbox);
         this.center.setAt(0, 0);
@@ -426,7 +428,7 @@ var C3D = (function () {
 
     View.prototype.constructCompass = function () {
         var mesh = new WGL.Mesh(),
-            attitudeM = R3.makeRotateQ(this.attitude),
+            attitudeM = R3.makeRotateQ(this.attitude.quaternion),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
