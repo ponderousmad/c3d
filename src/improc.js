@@ -6,7 +6,8 @@ var IMPROC = (function () {
         BYTE_MAX = 255;
 
 
-    function pixelAt(pixels, offset) {
+    function pixelAt(pixels, index) {
+        var offset = index * CHANNELS;
         return [pixels[offset + R], pixels[offset + G], pixels[offset + B], pixels[offset + A]];
     }
 
@@ -37,7 +38,7 @@ var IMPROC = (function () {
             mmToMeter = 1.0 / 1000.0;
 
         if (pixelsEqual(pixelAt(pixels, 0), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, CHANNELS),
+            var pixel = pixelAt(pixels, 1),
                 q = [];
             for (var o = 0; o < 4; ++o) {
                 q.push(byteToUnitValue(pixel[o]));
@@ -46,13 +47,15 @@ var IMPROC = (function () {
             skip += 2;
         }
         if (pixelsEqual(pixelAt(pixels, 2), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, 3 * CHANNELS);
+            var pixel = pixelAt(pixels, 3);
             for (var e = 0; e < 3; ++e) {
-                attitude.euler.setAt(Math.PI * byteToUnitValue(pixel[e]));
+                var angleFraction = byteToUnitValue(pixel[e]);
+                console.log("Euler", e, angleFraction);
+                attitude.euler.setAt(e, Math.PI * angleFraction);
             }
 
             for (var row = 0; row < 3; ++row) {
-                pixel = pixelAt(pixels, (4 + row) * CHANNELS);
+                pixel = pixelAt(pixels, 4 + row);
                 for (var column = 0; column < 3; ++column) {
                     attitude.matrix.setAt(row, column, byteToUnitValue(pixel[column]));
                 }

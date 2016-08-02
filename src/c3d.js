@@ -428,7 +428,10 @@ var C3D = (function () {
 
     View.prototype.constructCompass = function () {
         var mesh = new WGL.Mesh(),
-            attitudeM = R3.makeRotateQ(this.attitude.quaternion),
+            heading = this.attitude.euler.z,
+            tilt = this.attitude.euler.x,
+            twist = this.attitude.euler.y,
+            attitudeM = R3.makeRotateY(heading),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
@@ -460,6 +463,12 @@ var C3D = (function () {
                 new R3.Q(),
                 R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0))
             ];
+
+        console.log(
+            "Heading:", heading * R2.RAD_TO_DEG,
+            "Tilt:", tilt * R2.RAD_TO_DEG,
+            "Twist:", twist * R2.RAD_TO_DEG
+        );
 
         for (var a = 0; a < axes.length; ++a) {
             var transform = R3.matmul(R3.makeRotateQ(axes[a]), attitudeM);
