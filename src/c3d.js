@@ -431,7 +431,8 @@ var C3D = (function () {
             heading = this.attitude.euler.z,
             tilt = this.attitude.euler.x + (Math.PI * 0.5),
             twist = this.attitude.euler.y,
-            attitudeM = R3.makeRotateY(heading),
+            attitudeM = R3.matmul(R3.makeRotateZ(tilt), R3.makeRotateY(heading)),
+            fromQuaternion = R3.qToEuler(this.attitude.quaternion),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
@@ -468,6 +469,12 @@ var C3D = (function () {
             "Heading:", heading * R2.RAD_TO_DEG,
             "Tilt:", tilt * R2.RAD_TO_DEG,
             "Twist:", twist * R2.RAD_TO_DEG
+        );
+
+        console.log(
+            "QHeading:", fromQuaternion.z * R2.RAD_TO_DEG,
+            "QTilt:", (fromQuaternion.x + (Math.PI * 0.5)) * R2.RAD_TO_DEG,
+            "QTwist:", fromQuaternion.y * R2.RAD_TO_DEG
         );
 
         for (var a = 0; a < axes.length; ++a) {
