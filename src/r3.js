@@ -56,18 +56,68 @@ var R3 = (function () {
         this.m[at(2,2)] *= v.z;
     };
 
-    M.prototype.extractEuler = function () {
-        var m02 = this.m[at(0, 2)],
+    // Adapted from setFromRotationMatrix in
+    // https://github.com/mrdoob/three.js/blob/dev/src/math/Euler.js
+    M.prototype.extractEuler = function (order) {
+        var x = 0.0, y = 0.0, z = 0.0;
+        if (order === "XYZ" || !order) {
+            var m02 = this.m[at(0, 2)];
             y = Math.asin(clamp(m02, -1, 1));
-
-        if (Math.abs(m02) < 0.9999) {
-            return new V(
-                Math.atan2(-this.m[at(1, 2)], this.m[at(2, 2)]),
-                y,
-                Math.atan2(-this.m[at(0, 1)], this.m[at(0, 0)])
-            );
+            if (Math.abs(m02) < 0.99999) {
+                x = Math.atan2(-this.m[at(1, 2)], this.m[at(2, 2)]);
+                z = Math.atan2(-this.m[at(0, 1)], this.m[at(0, 0)]);
+            } else {
+                x = Math.atan2( this.m[at(2, 1)], this.m[at(1, 1)]);
+            }
+        } else if (order === "ZYX") {
+            var m20 = this.m[at(2, 0)];
+            y = Math.asin(-clamp(m20, - 1, 1));
+            if (Math.abs(m20) < 0.99999 ) {
+                x = Math.atan2( this.m[at(2, 1)], this.m[at(2, 2)]);
+                z = Math.atan2( this.m[at(1, 0)], this.m[at(0, 0)]);
+            } else {
+                z = Math.atan2(-this.m[at(0, 1)], this.m[at(1, 1)]);
+            }
+        } else if (order === "YXZ") {
+            var m12 = this.m[at(1, 2)];
+            x = Math.asin(-clamp(m12, -1, 1));
+            if (Math.abs(m12) < 0.99999) {
+                y = Math.atan2( this.m[at(0, 2)], this.m[at(2, 2)]);
+                z = Math.atan2( this.m[at(1, 0)], this.m[at(1, 1)]);
+            } else {
+                y = Math.atan2(-this.m[at(2, 0)], this.m[at(0, 0)]);
+            }
+        } else if (order === "ZXY") {
+            var m21 = this.m[at(2, 1)];
+            x = Math.asin(clamp(m21, -1, 1));
+            if (Math.abs(m21) < 0.99999) {
+                y = Math.atan2(-this.m[at(2, 0)], this.m[at(2, 2)]);
+                z = Math.atan2(-this.m[at(0, 1)], this.m[at(1, 1)]);
+            } else {
+                z = Math.atan2( this.m[at(1, 0)], this.m[at(0, 0)]);
+            }
+        } else if (order === "YZX") {
+            var m10 = this.m[at(1, 0)];
+            z = Math.asin(clamp(m10, -1, 1));
+            if (Math.abs(m10) < 0.99999) {
+                x = Math.atan2(-this.m[at(1, 2)], this.m[at(1, 1)]);
+                y = Math.atan2(-this.m[at(2, 0)], this.m[at(0, 0)]);
+            } else {
+                y = Math.atan2( this.m[at(0, 2)], this.m[at(2, 2)]);
+            }
+        } else if (order === "XZY") {
+            var m01 = this.m[at(0, 1)];
+            z = Math.asin(-clamp(m01, -1, 1));
+            if (Math.abs(m01) < 0.99999) {
+                x = Math.atan2( this.m[at(2, 1)], this.m[at(1, 1)]);
+                y = Math.atan2( this.m[at(0, 2)], this.m[at(0, 0)]);
+            } else {
+                x = Math.atan2(-this.m[at(1, 2)], this.m[at(2, 2)]);
+            }
+        } else {
+            console.log("Unknown order");
         }
-        return new V(Math.atan2(this.m[at(2, 1)], this.m[at(1, 1)]), y, 0.0);
+        return new V(x, y, z);
     };
 
     function makeRotateX(theta) {
@@ -376,8 +426,8 @@ var R3 = (function () {
         ]);
     }
 
-    function qToEuler(q) {
-        return makeRotateQ(q).extractEuler();
+    function qToEuler(q, order) {
+        return makeRotateQ(q).extractEuler(order);
     }
 
     var AABox = function () {

@@ -432,7 +432,6 @@ var C3D = (function () {
             tilt = this.attitude.euler.x + (Math.PI * 0.5),
             twist = this.attitude.euler.y,
             attitudeM = R3.matmul(R3.makeRotateZ(tilt), R3.makeRotateY(heading)),
-            fromQuaternion = R3.qToEuler(this.attitude.quaternion),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
@@ -463,7 +462,8 @@ var C3D = (function () {
                 R3.angleAxisQ(Math.PI * 0.5, new R3.V(0, 0, 1)),
                 new R3.Q(),
                 R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0))
-            ];
+            ],
+            orders = ["XYZ", "ZYX", "YXZ", "ZXY", "YZX", "XZY"];
 
         console.log(
             "Heading:", heading * R2.RAD_TO_DEG,
@@ -471,11 +471,16 @@ var C3D = (function () {
             "Twist:", twist * R2.RAD_TO_DEG
         );
 
-        console.log(
-            "QHeading:", fromQuaternion.z * R2.RAD_TO_DEG,
-            "QTilt:", (fromQuaternion.x + (Math.PI * 0.5)) * R2.RAD_TO_DEG,
-            "QTwist:", fromQuaternion.y * R2.RAD_TO_DEG
-        );
+        for (var o = 0; o < orders.length; ++o) {
+            var order = orders[o],
+                fromQuaternion = R3.qToEuler(this.attitude.quaternion, order);
+
+            console.log(
+                order + " QHeading:", fromQuaternion.z * R2.RAD_TO_DEG,
+                "QTilt:", (fromQuaternion.x + (Math.PI * 0.5)) * R2.RAD_TO_DEG,
+                "QTwist:", fromQuaternion.y * R2.RAD_TO_DEG
+            );
+        }
 
         for (var a = 0; a < axes.length; ++a) {
             var transform = R3.matmul(R3.makeRotateQ(axes[a]), attitudeM);
