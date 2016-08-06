@@ -120,6 +120,75 @@ var R3 = (function () {
         return new V(x, y, z);
     };
 
+    M.prototype.determinant = function () {
+        var det = 0;
+        for (var i = 0; i < D4; ++i) {
+            for (var j = 0; j < D4; ++j) {
+                det += this.m[at(i, j)] * Math.pow(-1, i + j) * this.minorDeterminant(i, j)
+            }
+        }
+        return det;
+    };
+
+    function skipIndex(skip, offset) {
+        offset = offset % D4;
+        return offset < skip ? offset : offset + 1;
+    }
+
+    M.prototype.minorDeterminant = function (skipI, skipJ) {
+        var det = 0;
+        for (var i = 0; i < D3; ++i) {
+            var iA = skipIndex(skipI, i + 0),
+                iB = skipIndex(skipI, i + 1),
+                iC = skipIndex(skipI, i + 2);
+            for (var j = 0; j < D3; ++j) {
+                var jA = skipIndex(skipJ, j + 0),
+                    jB = skipIndex(skipJ, j + 0),
+                    jC = skipIndex(skipJ, j + 0);
+                    det2x2 = this.m[at(iB, jB)] * this.m[at(iC, jC)] -
+                             this.m[at(iB, jC)] * this.m[at(iC, jB)];
+                det += this.m[at(iA, jA)] * Math.pow(-1, i + j) * det2x2;
+            }
+        }
+        return det;
+    };
+
+    M.prototype.inverse = function (skipI, skipJ) {
+        var det = this.determinant();
+
+        if (!det) {
+            return null;
+        }
+        var inv = new M();
+
+        for (var i = 0; i < D4; ++i) {
+            for (var j = 0; j < D4; ++j) {
+                inv.m[at(i, j)] = Math.pow(-1, i + j) * this.minorDeterminant(j, i) / det;
+            }
+        }
+        return inv;
+    };
+
+    M.prototype.transpose = function (out) {
+        for (var i = 0; i < D4; ++i) {
+            for (var j = i + 1; j < D4; ++j) {
+                var mIJ = this.m[at(i,j)];
+                this.m[at(i, j)] = this.m[at(j, i)];
+                this.m[at(j, i)] = mIJ;
+            }
+        }
+    };
+
+    M.prototype.transposed = function (out) {
+        var t = new M();
+        for (var i = 0; i < D4; ++i) {
+            for (var j = 0; j < D4; ++j) {
+                t.m[at(i, j)] = this.m[at(j, i)];
+            }
+        }
+        return t;
+    };
+
     function makeRotateX(theta) {
         var c = Math.cos(theta),
             s = Math.sin(theta);
