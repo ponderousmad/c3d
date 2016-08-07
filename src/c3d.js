@@ -26,6 +26,8 @@ var C3D = (function () {
         this.lastImage = null;
         this.lastOrbit = null;
         this.vrDisplay = null;
+        this.windowVisible = true;
+        this.eyeHeight = 0.25;
 
         this.fillCheckbox = document.getElementById("fill");
         this.turntableCheckbox = document.getElementById("turntable");
@@ -195,7 +197,8 @@ var C3D = (function () {
          if (this.vrDisplay && this.vrDisplay.isPresenting) {
             var pose = this.vrDisplay.getPose(),
                 p = pose.position,
-                m = R3.identity();
+                m = R3.identity(),
+                pivot = new R3.V(0, 0, -this.eyeHeight);
             room.viewer.orientation.setAll(pose.orientation);
             room.viewer.orientation.w *= -1;
 
@@ -203,31 +206,33 @@ var C3D = (function () {
                 var heading = this.attitude.euler.z,
                     tilt = this.attitude.euler.x + (Math.PI * 0.5),
                     twist = this.attitude.euler.y;
-                m.translate(R3.toOrigin(this.center));
+                m.translate(R3.toOrigin(pivot));
                 m = R3.matmul(R3.makeRotateY( heading), m);
                 m = R3.matmul(R3.makeRotateZ(    tilt), m);
                 m = R3.matmul(R3.makeRotateX(  -twist), m);
                 m = R3.matmul(R3.makeRotateY(-heading), m);
-                m.translate(this.center);
+                m.translate(pivot);
             }
-            m.translate(R3.toOrigin(this.center));
+            m.translate(R3.toOrigin(pivot));
             m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0)), m);
-            m.translate(this.center);
+            m.translate(pivot);
 
             var eyes = ["left", "right"];
             for (var e = 0; e < eyes.length; ++e) {
                 var eye = this.vrDisplay.getEyeParameters(eyes[e]);
-                room.viewer.position.set(p[0], p[1], p[2] - this.distance + this.center.z);
+                room.viewer.position.set(p[0], p[1] + this.eyeHeight, p[2] - this.distance + this.center.z);
                 room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
                 this.drawMeshes(room);
             }
             this.vrDisplay.submitFrame(pose);
         }
-        room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-        var rotate = R3.makeRotateQ(room.viewer.orientation);
-        room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
-        room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
-        this.drawMeshes(room);
+        if (this.windowVisible) {
+            room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
+            var rotate = R3.makeRotateQ(room.viewer.orientation);
+            room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
+            this.drawMeshes(room);
+        }
     };
 
     View.prototype.drawMeshes = function (room) {
@@ -586,12 +591,16 @@ var C3D = (function () {
                                 if (vrDisplay.capabilities.hasExternalDisplay) {
                                     exitVrButton.className = "";
                                     enterVrButton.className = "hidden";
+                                    view.windowVisible = true;
+                                } else {
+                                    view.windowVisible = false;
                                 }
                             } else {
                                 if (vrDisplay.capabilities.hasExternalDisplay) {
                                     exitVrButton.className = "hidden";
                                     enterVrButton.className = "";
                                 }
+                                view.windowVisible = true;
                             }
                         };
 
