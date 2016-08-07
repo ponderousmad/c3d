@@ -31,7 +31,8 @@ var IMPROC = (function () {
             attitude = {
                 quaternion: new R3.Q(),
                 euler: new R3.V(),
-                matrix: R3.identity()
+                matrix: R3.identity(),
+                validEuler: false
             },
             depths = [],
             skip = 0,
@@ -53,6 +54,7 @@ var IMPROC = (function () {
                 console.log("Euler", e, angleFraction);
                 attitude.euler.setAt(e, Math.PI * angleFraction);
             }
+            attitude.validEuler = true;
 
             for (var row = 0; row < 3; ++row) {
                 pixel = pixelAt(pixels, 4 + row);

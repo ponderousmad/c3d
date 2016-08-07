@@ -192,16 +192,33 @@ var C3D = (function () {
             room.gl.enable(room.gl.CULL_FACE);
         }
 
-        if (this.vrDisplay && this.vrDisplay.isPresenting) {
+         if (this.vrDisplay && this.vrDisplay.isPresenting) {
             var pose = this.vrDisplay.getPose(),
-                p = pose.position;
+                p = pose.position,
+                m = R3.identity();
             room.viewer.orientation.setAll(pose.orientation);
             room.viewer.orientation.w *= -1;
+
+            if (this.attitude && this.attitude.validEuler && this.attitude.pitch !== 0) {
+                var heading = this.attitude.euler.z,
+                    tilt = this.attitude.euler.x + (Math.PI * 0.5),
+                    twist = this.attitude.euler.y;
+                m.translate(R3.toOrigin(this.center));
+                m = R3.matmul(R3.makeRotateY( heading), m);
+                m = R3.matmul(R3.makeRotateZ(    tilt), m);
+                m = R3.matmul(R3.makeRotateX(  -twist), m);
+                m = R3.matmul(R3.makeRotateY(-heading), m);
+                m.translate(this.center);
+            }
+            m.translate(R3.toOrigin(this.center));
+            m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0)), m);
+            m.translate(this.center);
+
             var eyes = ["left", "right"];
             for (var e = 0; e < eyes.length; ++e) {
                 var eye = this.vrDisplay.getEyeParameters(eyes[e]);
                 room.viewer.position.set(p[0], p[1], p[2] - this.distance + this.center.z);
-                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", eye);
+                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
                 this.drawMeshes(room);
             }
             this.vrDisplay.submitFrame(pose);
