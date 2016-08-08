@@ -611,8 +611,8 @@ var C3D = (function () {
                     enterVrButton.addEventListener("click", requestPresentVR, false);
                     exitVrButton.addEventListener("click", requestExitVR, false);
 
-                    window.addEventListener("vrdisplayactivated", requestPresentVR, false);
-                    window.addEventListener("vrdisplaydeactivated", requestExitVR, false);
+                    window.addEventListener("vrdisplayactivate", requestPresentVR, false);
+                    window.addEventListener("vrdisplaydeactivate", requestExitVR, false);
                     window.addEventListener('vrdisplaypresentchange', onPresentChange, false);
                     window.addEventListener("resize", onResize, false);
                     onResize();
