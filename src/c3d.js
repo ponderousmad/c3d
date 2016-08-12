@@ -25,8 +25,7 @@ var C3D = (function () {
         this.iPadMiniBackCameraFOV = 56;
         this.lastImage = null;
         this.lastOrbit = null;
-        this.vrDisplay = null;
-        this.windowVisible = true;
+        this.vrToggleIDs = { enter: "enterVR", exit: "exitVR" };
         this.eyeHeight = 0.25;
 
         this.fillCheckbox = document.getElementById("fill");
@@ -194,8 +193,8 @@ var C3D = (function () {
             room.gl.enable(room.gl.CULL_FACE);
         }
 
-         if (this.vrDisplay && this.vrDisplay.isPresenting) {
-            var pose = this.vrDisplay.getPose(),
+         if (room.viewer.inVR()) {
+            var pose = room.viewer.vrPose(),
                 p = pose.position,
                 m = R3.identity(),
                 pivot = new R3.V(0, 0, -this.eyeHeight);
@@ -219,14 +218,14 @@ var C3D = (function () {
 
             var eyes = ["left", "right"];
             for (var e = 0; e < eyes.length; ++e) {
-                var eye = this.vrDisplay.getEyeParameters(eyes[e]);
+                var eye = room.viewer.vrEye(eyes[e]);
                 room.viewer.position.set(p[0], p[1] + this.eyeHeight, p[2] - this.distance + this.center.z);
                 room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
                 this.drawMeshes(room);
             }
-            this.vrDisplay.submitFrame(pose);
+            room.viewer.submitVR(pose);
         }
-        if (this.windowVisible) {
+        if (room.viewer.showOnPrimary()) {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
             var rotate = R3.makeRotateQ(room.viewer.orientation);
             room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
@@ -544,87 +543,6 @@ var C3D = (function () {
         return defaultValue;
     }
 
-    function setupVrSupport(canvas, view) {
-        // Check for WebVR support.
-        if (navigator.getVRDisplays) {
-            navigator.getVRDisplays().then(function (displays) {
-                if (!displays.length) {
-                    console.log("WebVR supported, but no VRDisplays found.");
-                } else {
-                    var vrDisplay = displays[0];
-                    console.log("Found display:", vrDisplay);
-                    view.setVrDisplay(vrDisplay);
-
-                    var enterVrButton = document.getElementById("enterVR"),
-                        exitVrButton = document.getElementById("exitVR"),
-                        onResize = function () {
-                            if (vrDisplay.isPresenting) {
-                                view.maximize = false;
-                                var leftEye = vrDisplay.getEyeParameters("left");
-                                var rightEye = vrDisplay.getEyeParameters("right");
-                                canvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
-                                canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
-                            } else {
-                                view.maximize = true;
-                            }
-                        },
-                        requestPresentVR = function () {
-                            // This can only be called in response to a user gesture.
-                            vrDisplay.requestPresent([{ source: canvas }]).then(
-                                function () { console.log("Started present."); },
-                                function () { console.log("Request present failed."); }
-                            );
-                        },
-                        requestExitVR = function () {
-                            if (!vrDisplay.isPresenting) {
-                                // (May get vrdisplaydeactivated when not presenting.)
-                                return;
-                            }
-                            vrDisplay.exitPresent().then(
-                                function () { },
-                                function () { }
-                            );
-                        },
-                        onPresentChange = function () {
-                            onResize();
-                            if (vrDisplay.isPresenting) {
-                                if (vrDisplay.capabilities.hasExternalDisplay) {
-                                    exitVrButton.className = "";
-                                    enterVrButton.className = "hidden";
-                                    view.windowVisible = true;
-                                } else {
-                                    view.windowVisible = false;
-                                }
-                            } else {
-                                if (vrDisplay.capabilities.hasExternalDisplay) {
-                                    exitVrButton.className = "hidden";
-                                    enterVrButton.className = "";
-                                }
-                                view.windowVisible = true;
-                            }
-                        };
-
-                    if (vrDisplay.capabilities.canPresent) {
-                        enterVrButton.className = "";
-                    }
-
-                    enterVrButton.addEventListener("click", requestPresentVR, false);
-                    exitVrButton.addEventListener("click", requestExitVR, false);
-
-                    window.addEventListener("vrdisplayactivate", requestPresentVR, false);
-                    window.addEventListener("vrdisplaydeactivate", requestExitVR, false);
-                    window.addEventListener('vrdisplaypresentchange', onPresentChange, false);
-                    window.addEventListener("resize", onResize, false);
-                    onResize();
-                }
-            });
-        } else if (navigator.getVRDevices) {
-            console.log("Old WebVR version.");
-        } else {
-            console.log("WebVR not supported.");
-        }
-    }
-
     window.onload = function(e) {
         MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
@@ -639,8 +557,6 @@ var C3D = (function () {
             query = location.search,
             image = getQueryParameter(query, "image");
         view.fill = getQueryParameter(query, "fill", "1") == "1";
-
-        setupVrSupport(canvas, view);
 
         MAIN.start(canvas, view);
 
