@@ -26,6 +26,7 @@ var C3D = (function () {
         this.lastImage = null;
         this.lastOrbit = null;
         this.vrToggleIDs = { enter: "enterVR", exit: "exitVR" };
+        this.room = null;
         this.eyeHeight = 0.25;
 
         this.fillCheckbox = document.getElementById("fill");
@@ -55,6 +56,10 @@ var C3D = (function () {
         });
     }
 
+    View.prototype.setRoom = function (room) {
+        this.room = room;
+    };
+
     View.prototype.updateFill = function () {
         if (this.stitchMode != "simple") {
             this.showImage(this.lastImage, false);
@@ -63,16 +68,12 @@ var C3D = (function () {
         }
     };
 
-    View.prototype.setVrDisplay = function (display) {
-        this.vrDisplay = display;
-    };
-
     View.prototype.resetView = function () {
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
         this.distance = this.imageDistance;
-        if (this.vrDisplay) {
-            this.vrDisplay.resetPose();
+        if (this.room) {
+            this.room.viewer.resetPose();
         }
     };
 
