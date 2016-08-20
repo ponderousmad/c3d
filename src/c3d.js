@@ -354,8 +354,8 @@ var C3D = (function () {
     View.prototype.constructGrid = function (scene, stitch, fill) {
         var height = scene.height,
             width = scene.width,
-            xStride = 1,
-            yStride = 1,
+            xStride = Math.floor(width / 640),
+            yStride = xStride,
             rowIndexWidth = 1 + (width / xStride),
             indexStride = stitch == "simple" ? rowIndexWidth : 2,
             depthScale = 1,
@@ -373,9 +373,9 @@ var C3D = (function () {
             SMART_STITCH_MAX_DIFFERENCE = 0.15,
             SMART_STITCH_DIFFERENCE_THRESHOLD = 0.05,
             pixelIndexStride = (stitch == "simple" ? 1 : 4),
-            vertexCount = pixelIndexStride * (height + 1) * (width + 1),
+            vertexCount = pixelIndexStride * ((height / yStride) + 1) * ((width / xStride) + 1),
             chunks = 2 * Math.ceil(vertexCount / (2 * MAX_INDEX)),
-            rowsPerChunk = height / chunks,
+            rowsPerChunk = height / (yStride * chunks),
             mesh = null,
             meshes = [],
             depths = (stitch == "simple") || fill ? scene.cleanDepths : scene.depths;
