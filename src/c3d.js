@@ -257,9 +257,9 @@ var C3D = (function () {
             scene.depths, scene.width, scene.height, IMPROC.strategies.avg
         );
 
-        var cleanSize = IMPROC.nextPowerOfTwo(Math.max(scene.height, scene.width));
-        scene.uMax = scene.width / cleanSize;
-        scene.vMax = scene.height / cleanSize;
+        var cleanSize = IMPROC.nextPowerOfTwo(Math.max(scene.imageHeight, scene.imageWidth));
+        scene.uMax = scene.imageWidth / cleanSize;
+        scene.vMax = scene.imageHeight / cleanSize;
 
         var canvas = document.createElement('canvas'),
             context = canvas.getContext('2d'),

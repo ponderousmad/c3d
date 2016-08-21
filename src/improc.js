@@ -3,11 +3,13 @@ var IMPROC = (function () {
 
     var CHANNELS = 4,
         R = 0, G = 1, B = 2, A = 3,
-        BYTE_MAX = 255;
+        BYTE_MAX = 255,
+        DEPTH_WIDTH = 640,
+        DEPTH_HEIGHT = 480;
 
 
-    function pixelAt(pixels, index) {
-        var offset = index * CHANNELS;
+    function pixelAt(pixels, index, xStride) {
+        var offset = index * xStride * CHANNELS;
         return [pixels[offset + R], pixels[offset + G], pixels[offset + B], pixels[offset + A]];
     }
 
@@ -36,10 +38,12 @@ var IMPROC = (function () {
             },
             depths = [],
             skip = 0,
-            mmToMeter = 1.0 / 1000.0;
+            mmToMeter = 1.0 / 1000.0,
+            xStride = Math.max(1, width / DEPTH_WIDTH),
+            yStride = Math.max(1, height / DEPTH_HEIGHT);
 
-        if (pixelsEqual(pixelAt(pixels, 0), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, 1),
+        if (pixelsEqual(pixelAt(pixels, 0, xStride), [BYTE_MAX, 0, 0, BYTE_MAX])) {
+            var pixel = pixelAt(pixels, 1, xStride),
                 q = [];
             for (var o = 0; o < 4; ++o) {
                 q.push(byteToUnitValue(pixel[o]));
@@ -47,8 +51,8 @@ var IMPROC = (function () {
             attitude.quaternion = new R3.Q(q[0], q[1], q[2], q[3]);
             skip += 2;
         }
-        if (pixelsEqual(pixelAt(pixels, 2), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, 3);
+        if (pixelsEqual(pixelAt(pixels, 2, xStride), [BYTE_MAX, 0, 0, BYTE_MAX])) {
+            var pixel = pixelAt(pixels, 3, xStride);
             for (var e = 0; e < 3; ++e) {
                 var angleFraction = byteToUnitValue(pixel[e]);
                 console.log("Euler", e, angleFraction);
@@ -57,7 +61,7 @@ var IMPROC = (function () {
             attitude.validEuler = true;
 
             for (var row = 0; row < 3; ++row) {
-                pixel = pixelAt(pixels, 4 + row);
+                pixel = pixelAt(pixels, 4 + row, xStride);
                 for (var column = 0; column < 3; ++column) {
                     attitude.matrix.setAt(row, column, byteToUnitValue(pixel[column]));
                 }
@@ -68,8 +72,8 @@ var IMPROC = (function () {
             attitude.euler = attitude.matrix.extractEuler();
         }
         console.log("Attitude:", attitude);
-        for (var y = 0; y < height; ++y) {
-            for (var x = 0; x < width; ++x) {
+        for (var y = 0; y < height; y += yStride) {
+            for (var x = 0; x < width; x += xStride) {
                 var i = (y * width + x) * CHANNELS;
                 var r = pixels[i + R],
                     g = pixels[i + G],
@@ -84,7 +88,7 @@ var IMPROC = (function () {
                 }
             }
         }
-        return { depths: depths, width: width, height: height, attitude: attitude };
+        return { depths: depths, width: Math.min(DEPTH_WIDTH, width), height: Math.min(DEPTH_HEIGHT, width), attitude: attitude };
     }
 
     function processImage(image) {
@@ -100,10 +104,9 @@ var IMPROC = (function () {
 
         var buffer = context.getImageData(0, 0, image.width, image.height),
             data = buffer.data,
-            result = decodeDepth(data, image.width, height, height);
-
-        result.width = image.width;
-        result.height = height;
+            result = decodeDepth(data, image.width, height);
+        result.imageWidth = image.width;
+        result.imageHeight = height;
 
         return result;
     }
