@@ -94,19 +94,28 @@ var IMPROC = (function () {
     function processImage(image) {
         var canvas = document.createElement('canvas'),
             context = canvas.getContext('2d'),
-            height = image.height / 2;
+            height = image.height / 2,
+            heightOffset = height,
+            depthHeight = height,
+            depthWidth = image.width;
+
+        if (image.width % DEPTH_WIDTH !== 0) {
+            height = Math.ceil(DEPTH_HEIGHT * DEPTH_WIDTH / image.width);
+            heightOffset = image.height - height;
+            depthHeight = DEPTH_HEIGHT;
+            depthWidth = DEPTH_WIDTH
+        }
 
         canvas.width = image.width;
         canvas.height = height;
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        context.drawImage(image, 0, height, image.width, height, 0, 0, image.width, height);
+        context.drawImage(image, 0, heightOffset, image.width, height, 0, 0, image.width, height);
 
-        var buffer = context.getImageData(0, 0, image.width, image.height),
-            data = buffer.data,
-            result = decodeDepth(data, image.width, height);
+        var buffer = context.getImageData(0, 0, image.width, height),
+            result = decodeDepth(buffer.data, depthWidth, depthHeight);
         result.imageWidth = image.width;
-        result.imageHeight = height;
+        result.imageHeight = heightOffset;
 
         return result;
     }
