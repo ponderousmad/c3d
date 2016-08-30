@@ -193,8 +193,7 @@ var C3D = (function () {
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
-
-         if (room.viewer.inVR()) {
+        if (room.viewer.inVR()) {
             var pose = room.viewer.vrPose(),
                 p = pose.position,
                 m = R3.identity(),
@@ -227,10 +226,12 @@ var C3D = (function () {
             room.viewer.submitVR(pose);
         }
         if (room.viewer.showOnPrimary()) {
-            room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-            var rotate = R3.makeRotateQ(room.viewer.orientation);
-            room.viewer.position = R3.subVectors(this.center, rotate.transformV(new R3.V(0, 0, this.distance)));
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
+            var orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0),
+                rot = R3.makeTranslate(this.center);
+            rot = R3.matmul(rot, R3.makeRotateQ(orientation));
+            rot = R3.matmul(rot, R3.makeTranslate(R3.toOrigin(this.center)));
+            room.viewer.position = new R3.V(0, 0, this.center.z - this.distance);
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", rot);
             this.drawMeshes(room);
         }
     };
@@ -544,7 +545,6 @@ var C3D = (function () {
     }
 
     window.onload = function(e) {
-        MAIN.runTestSuites();
         var canvas = document.getElementById("canvas3D"),
             controls = document.getElementById("controls"),
             menuButton = document.getElementById("menuButton"),
@@ -620,6 +620,8 @@ var C3D = (function () {
                 resultsBatch.commit();
             }
         });
+
+        MAIN.runTestSuites();
     };
 
     return {

@@ -63,7 +63,7 @@ var R3 = (function () {
         if (order === "XYZ" || !order) {
             var m02 = this.m[at(0, 2)];
             y = Math.asin(clamp(m02, -1, 1));
-            if (Math.abs(m02) < 0.99999) {
+            if (Math.abs(m02) < 0.9999) {
                 x = Math.atan2(-this.m[at(1, 2)], this.m[at(2, 2)]);
                 z = Math.atan2(-this.m[at(0, 1)], this.m[at(0, 0)]);
             } else {
@@ -117,7 +117,7 @@ var R3 = (function () {
         } else {
             console.log("Unknown order");
         }
-        return new V(x, y, z);
+        return new V(x, y, z, 0);
     };
 
     // Based on http://paulbourke.net/miscellaneous/determinant/
@@ -195,14 +195,31 @@ var R3 = (function () {
         return t;
     };
 
+    function makeTranslate(v) {
+        var m = new M();
+        m.translate(v);
+        return m;
+    }
+
+    function makeScale(s) {
+        var m = new M();
+
+        if (s && s instanceof V) {
+            m.scaleBy(s);
+        } else {
+            m.scale(s);
+        }
+        return m;
+    }
+
     function makeRotateX(theta) {
         var c = Math.cos(theta),
             s = Math.sin(theta);
 
         return new M([
             1, 0, 0, 0,
-            0, c,-s, 0,
-            0, s, c, 0,
+            0, c, s, 0,
+            0,-s, c, 0,
             0, 0, 0, 1
         ]);
     }
@@ -212,9 +229,9 @@ var R3 = (function () {
             s = Math.sin(theta);
 
         return new M([
-            c, 0, s, 0,
+            c, 0,-s, 0,
             0, 1, 0, 0,
-           -s, 0, c, 0,
+            s, 0, c, 0,
             0, 0, 0, 1
         ]);
     }
@@ -224,8 +241,8 @@ var R3 = (function () {
             s = Math.sin(theta);
 
         return new M([
-            c,-s, 0, 0,
-            s, c, 0, 0,
+            c, s, 0, 0,
+           -s, c, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1
         ]);
@@ -267,7 +284,7 @@ var R3 = (function () {
         for (var i = 0; i < D4; ++i) {
             var value = 0;
             for (var j = 0; j < D4; ++j) {
-                value += v.v(j) * this.at(j, i);
+                value += v.v(j) * this.at(i, j);
             }
             result.setAt(i, value);
         }
@@ -375,6 +392,9 @@ var R3 = (function () {
 
     V.prototype.normalize = function () {
         var length = this.length();
+        if (length === 0) {
+            return;
+        }
         this.x /= length;
         this.y /= length;
         this.z /= length;
@@ -382,7 +402,10 @@ var R3 = (function () {
 
     V.prototype.normalized = function () {
         var length = this.length();
-        return new V(this.x / length, this.y / length, this.z / length, this.w);
+        if (length) {
+            return new V(this.x / length, this.y / length, this.z / length, this.w);
+        }
+        return new V();
     };
 
     function pointDistanceSq(a, b) {
@@ -401,7 +424,7 @@ var R3 = (function () {
     }
 
     function subVectors(a, b) {
-        return new V(a.x - b.x, a.y - b.y, a.z - b.z, Math.max(0, a.z - b.z));
+        return new V(a.x - b.x, a.y - b.y, a.z - b.z, Math.max(0, a.w - b.w));
     }
 
     function Q(x, y, z, w) {
@@ -591,76 +614,238 @@ var R3 = (function () {
     }
 
     function testSuite() {
+        function testEqualsV(v, x, y, z, w, tolerance) {
+            if (tolerance !== undefined) {
+                TEST.tolEquals(v.x, x, tolerance);
+                TEST.tolEquals(v.y, y, tolerance);
+                TEST.tolEquals(v.z, z), tolerance;
+                if (w !== undefined) {
+                    TEST.tolEquals(v.w, w, tolerance);
+                }
+            } else {
+                TEST.equals(v.x, x);
+                TEST.equals(v.y, y);
+                TEST.equals(v.z, z);
+
+                if (w !== undefined) {
+                    TEST.equals(v.w, w);
+                }
+            }
+        }
+        var TOLERANCE = 1e-6;
+
         var vectorTests = [
             function testConstruct() {
                 var v = new V();
-
-                TEST.equals(v.x, 0);
-                TEST.equals(v.y, 0);
-                TEST.equals(v.z, 0);
-                TEST.equals(v.w, 1);
+                testEqualsV(v, 0, 0, 0, 1);
 
                 var ones = new V(1,1,1);
-
-                TEST.equals(ones.x, 1);
-                TEST.equals(ones.y, 1);
-                TEST.equals(ones.z, 1);
-                TEST.equals(ones.w, 1);
+                testEqualsV(ones, 1, 1, 1, 1);
             },
 
             function testLength() {
-                var v = new V(3, 4, 12);
+                var zero = new V(0, 0, 0, 0),
+                    one = new V(1, 0, 0, 0),
+                    origin = new V(0, 0, 0, 1),
+                    v = new V(3, 4, 12);
+
+                TEST.tolEquals(zero.lengthSq(), 0);
+                TEST.tolEquals(zero.length(), 0);
+                TEST.tolEquals(one.lengthSq(), 1);
+                TEST.tolEquals(one.length(), 1);
+                TEST.tolEquals(origin.lengthSq(), 0);
+                TEST.tolEquals(origin.length(), 0);
                 TEST.tolEquals(v.lengthSq(), 13 * 13);
                 TEST.tolEquals(v.length(), 13);
             },
 
             function testNormalize() {
-                var v = new V(1, 0, 0);
+                var one = new V(1, 0, 0),
+                    ones = new V(1, 1, 1),
+                    zero = new V(),
+                    v = new V(3, 4, 12),
+                    n = ones.normalized(),
+                    invRoot3 = 1 / Math.sqrt(3);
 
+                one.normalize();
+                testEqualsV(one, 1, 0, 0, 1);
+
+                testEqualsV(ones, 1, 1, 1, 1);
+                testEqualsV(n, invRoot3, invRoot3, invRoot3, 1);
+
+                testEqualsV(zero.normalized(), 0, 0, 0, 1);
+                zero.normalize();
+                testEqualsV(zero, 0, 0, 0, 1);
+
+                testEqualsV(v.normalized(), 3 / 13, 4 / 13, 12 / 13, 1, TOLERANCE);
                 v.normalize();
-
-                TEST.equals(v.x, 1);
-                TEST.equals(v.y, 0);
-                TEST.equals(v.z, 0);
-                TEST.equals(v.w, 1);
-
-                var a = new V(1, 1, 1),
-                    n = a.normalized();
-
-                TEST.equals(a.x, 1);
-                TEST.equals(a.y, 1);
-                TEST.equals(a.z, 1);
-                TEST.equals(a.w, 1);
-
-                TEST.tolEquals(n.x, 1 / Math.sqrt(3));
-                TEST.tolEquals(n.y, 1 / Math.sqrt(3));
-                TEST.tolEquals(n.z, 1 / Math.sqrt(3));
-                TEST.tolEquals(n.w, 1);
+                testEqualsV(v, 3 / 13, 4 / 13, 12 / 13, 1, TOLERANCE);
             },
 
             function testScale() {
-                var v = new V(1, -2, 0);
+                var v = new V(1, -2, 0),
+                    zero = new V();
                 v.scale(-2);
-                TEST.equals(v.x, -2);
-                TEST.equals(v.y, 4);
-                TEST.equals(v.z, 0);
-                TEST.equals(v.w, 1);
+                testEqualsV(v, -2, 4, 0, 1);
+                zero.scale(27);
+                testEqualsV(zero, 0, 0, 0, 1);
+            },
+
+            function testArithmetic() {
+                var a = new V(1, 1, 1),
+                    b = new V(3, 4, 12, 0),
+                    zero = new V(0, 0, 0, 0),
+                    origin = new V(),
+                    r = addVectors(a, b);
+
+                testEqualsV(r, 4, 5, 13, 1);
+                testEqualsV(addVectors(a, zero), a.x, a.y, a.z, 1);
+
+                testEqualsV(subVectors(a, b), -2, -3, -11, 1);
+                testEqualsV(subVectors(a, origin), a.x, a.y, a.z, 0);
+
+                r = a.copy();
+                r.add(b);
+                testEqualsV(r, 4, 5, 13, 1);
+
+                r = a.copy();
+                r.add(zero);
+                testEqualsV(r, a.x, a.y, a.z, 1);
+
+                r = a.copy();
+                r.sub(b);
+                testEqualsV(r, -2, -3, -11, 1);
+
+                r = a.copy();
+                r.sub(origin);
+                testEqualsV(r, a.x, a.y, a.z, 0);
+
+                r = a.copy();
+                r.addScaled(b, -2);
+                testEqualsV(r, -5, -7, -23, 1);
+            }
+        ];
+
+        var quaternionTests = [
+            function testConstruct() {
+                var zero = new Q(),
+                    q = new Q(0.6, 0, 0, 0.8),
+                    r = new Q(0.6, 0, 0);
+
+                testEqualsV(zero, 0, 0, 0, 1);
+                testEqualsV(q, 0.6, 0, 0, 0.8);
+                testEqualsV(r, 0.6, 0, 0, 0.8);
+            },
+            
+            function testAngleAxisQ() {
+                var xAxis = angleAxisQ(Math.PI/4, new V(1, 0, 0, 0));
+                testEqualsV(xAxis, Math.sin(Math.PI/8), 0, 0, Math.cos(Math.PI/8));
+
+                var angle = Math.PI/6,
+                    q = angleAxisQ(Math.PI/6, new V(1, -1, 0.5));
+                testEqualsV(q, Math.sin(angle/2),
+                              -Math.sin(angle/2),
+                               Math.sin(angle/2) / 2,
+                               Math.cos(angle/2));
             }
         ];
 
         var matrixTests = [
+            function testConstruct() {
+                var m = new M();
+
+                for (var i = 0; i < D4; ++i) {
+                    for (var j = 0; j < D4; ++j) {
+                        TEST.equals(m.at(i, j), i == j ? 1 : 0);
+                    }
+                }
+            },
+
+            function testTranslate() {
+                var t = makeTranslate(new V(2, 3, 4)),
+                    p = new V(1, 1, 1, 1),
+                    v = new V(1, 1, 1, 0);
+
+                testEqualsV(t.transformV(p), 3, 4, 5, 1);
+                testEqualsV(t.transformV(v), 1, 1, 1, 0);
+            },
+
+            function testScale() {
+                var uniformScale = makeScale(10),
+                    p = new V(1, 1, 1, 1),
+                    v = new V(1, 1, 1, 0);
+
+                testEqualsV(uniformScale.transformV(p), 10, 10, 10, 1);
+                testEqualsV(uniformScale.transformV(v), 10, 10, 10, 0);
+
+                var nonUniformScale = makeScale(new V(2, 4, 6));
+
+                testEqualsV(nonUniformScale.transformV(p), 2, 4, 6, 1);
+                testEqualsV(nonUniformScale.transformV(v), 2, 4, 6, 0);
+            },
+
+            function testRotateEuler() {
+                var rotX = makeRotateX(Math.PI / 2),
+                    p = new V(1, 1, 1, 1),
+                    v = new V(1, 1, 1, 0);
+
+                testEqualsV(rotX.transformV(p), 1, -1, 1, 1, TOLERANCE);
+                testEqualsV(rotX.transformV(v), 1, -1, 1, 0, TOLERANCE);
+                testEqualsV(rotX.extractEuler(), Math.PI / 2, 0, 0, 0);
+
+                var rotY = makeRotateY(Math.PI / 4),
+                    root2 = Math.sqrt(2);
+
+                testEqualsV(rotY.transformV(p), root2, 1, 0, 1, TOLERANCE);
+                testEqualsV(rotY.transformV(v), root2, 1, 0, 0, TOLERANCE);
+                testEqualsV(rotY.extractEuler(), 0, Math.PI / 4, 0, 0, TOLERANCE);
+
+                var rotZ = makeRotateZ(Math.PI);
+
+                testEqualsV(rotZ.transformV(p), -1, -1, 1, 1, TOLERANCE);
+                testEqualsV(rotZ.transformV(v), -1, -1, 1, 0, TOLERANCE);
+                testEqualsV(rotZ.extractEuler(), 0, 0, Math.PI, 0, TOLERANCE);
+            },
+
+            function testRotateQ() {
+                var i = makeRotateQ(new Q());
+
+                testEqualsV(i.transformV(new V(1, 2, 3)), 1, 2, 3, 1);
+
+                var xAxis = angleAxisQ(Math.PI / 2, new V(1, 0, 0)),
+                    rotX = makeRotateQ(xAxis);
+
+                testEqualsV(rotX.transformV(new V(1, 1, 1, 1)), 1, -1, 1, 1, TOLERANCE);
+                testEqualsV(rotX.transformV(new V(1, 1, 1, 0)), 1, -1, 1, 0, TOLERANCE);
+                testEqualsV(rotX.extractEuler(), Math.PI / 2, 0, 0, 0, TOLERANCE);
+            },
+
+            function testMultiply() {
+                var rot = makeRotateX(Math.PI / 2),
+                    offset = new V(10, 10, -10),
+                    trans = makeTranslate(offset),
+                    rt = matmul(rot, trans),
+                    tr = matmul(trans, rot),
+                    p = new V(1, 1, 1, 1),
+                    v = new V(1, 1, 1, 0);
+
+                testEqualsV(tr.transformV(p), 11, 9, -9, 1, TOLERANCE);
+                testEqualsV(tr.transformV(v), 1, -1, 1, 0, TOLERANCE);
+
+                testEqualsV(rt.transformV(p), 11, 9, 11, 1, TOLERANCE);
+                testEqualsV(rt.transformV(v), 1, -1, 1, 0, TOLERANCE);
+
+                testEqualsV(offset, tr.at(0, 3), tr.at(1, 3), tr.at(2, 3));
+            }
         ];
 
         var aaboxTests = [
         ];
 
-        var quaternionTests = [
-        ];
-
         TEST.run("R3 Vector", vectorTests);
+        TEST.run("Quaternion", quaternionTests);
         TEST.run("R3 Matrix", matrixTests);
         TEST.run("R3 AABox", aaboxTests);
-        TEST.run("Quaternion", quaternionTests);
     }
 
     return {
@@ -673,6 +858,8 @@ var R3 = (function () {
         origin: function () { return new V(); },
         toOrigin: function (v) { var o = new V(); o.sub(v); return o; },
         zeroQ: function () { return new Q(0, 0, 0, 1); },
+        makeTranslate: makeTranslate,
+        makeScale: makeScale,
         makeRotateX: makeRotateX,
         makeRotateY: makeRotateY,
         makeRotateZ: makeRotateZ,
