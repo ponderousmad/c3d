@@ -218,8 +218,10 @@ var C3D = (function () {
 
             var eyes = ["left", "right"];
             for (var e = 0; e < eyes.length; ++e) {
-                var eye = room.viewer.vrEye(eyes[e]);
-                room.viewer.position.set(p[0], p[1] + this.eyeHeight, p[2] - this.distance + this.center.z);
+                var eye = room.viewer.vrEye(eyes[e]),
+                    head = new R3.V(p[0], p[1] + this.eyeHeight, p[2] + this.center.z - this.distance),
+                    headOffset = R3.makeRotateQ(room.viewer.orientation).transformV(head);
+                room.viewer.position = R3.addVectors(headOffset, new R3.V(0, 0, 0));
                 room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
                 this.drawMeshes(room);
             }
