@@ -265,7 +265,7 @@ var C3D = (function () {
         var canvas = document.createElement('canvas'),
             context = canvas.getContext('2d'),
             thirdWidth = cleanSize / 3,
-            compassHeight = 50;
+            compassHeight = Math.ceil(cleanSize / 10);
 
         canvas.width = cleanSize;
         canvas.height = cleanSize;
