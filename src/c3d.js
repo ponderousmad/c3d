@@ -226,12 +226,10 @@ var C3D = (function () {
             room.viewer.submitVR(pose);
         }
         if (room.viewer.showOnPrimary()) {
-            var orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0),
-                rot = R3.makeTranslate(this.center);
-            rot = R3.matmul(rot, R3.makeRotateQ(orientation));
-            rot = R3.matmul(rot, R3.makeTranslate(R3.toOrigin(this.center)));
-            room.viewer.position = new R3.V(0, 0, this.center.z - this.distance);
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", rot);
+            room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
+            var offset = R3.makeRotateQ(room.viewer.orientation).transformV(this.center);
+            room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
         }
     };
