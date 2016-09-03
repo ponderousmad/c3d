@@ -206,10 +206,10 @@ var C3D = (function () {
                     tilt = this.attitude.euler.x + (Math.PI * 0.5),
                     twist = this.attitude.euler.y;
                 m.translate(R3.toOrigin(pivot));
-                m = R3.matmul(R3.makeRotateY( heading), m);
-                m = R3.matmul(R3.makeRotateZ(    tilt), m);
-                m = R3.matmul(R3.makeRotateX(  -twist), m);
-                m = R3.matmul(R3.makeRotateY(-heading), m);
+                m = R3.matmul(m, R3.makeRotateY(-heading));
+                m = R3.matmul(m, R3.makeRotateZ(   -tilt));
+                m = R3.matmul(m, R3.makeRotateX(   twist));
+                m = R3.matmul(m, R3.makeRotateY( heading));
                 m.translate(pivot);
             }
             m.translate(R3.toOrigin(pivot));
@@ -453,7 +453,7 @@ var C3D = (function () {
             heading = this.attitude.euler.z,
             tilt = this.attitude.euler.x + (Math.PI * 0.5),
             twist = this.attitude.euler.y,
-            attitudeM = R3.matmul(R3.makeRotateZ(tilt), R3.makeRotateY(heading)),
+            attitudeM = R3.matmul(R3.makeRotateY(-heading), R3.makeRotateZ(-tilt)),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
@@ -505,7 +505,7 @@ var C3D = (function () {
         }
 
         for (var a = 0; a < axes.length; ++a) {
-            var transform = R3.matmul(R3.makeRotateQ(axes[a]), attitudeM);
+            var transform = R3.matmul(attitudeM, R3.makeRotateQ(axes[a]));
 
             up = transform.transformV(up);
             down = transform.transformV(down);
