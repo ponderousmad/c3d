@@ -43,27 +43,27 @@ var IMPROC = (function () {
             yStride = Math.max(1, height / DEPTH_HEIGHT);
 
         if (pixelsEqual(pixelAt(pixels, 0, xStride), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, 1, xStride),
+            var qPixel = pixelAt(pixels, 1, xStride),
                 q = [];
             for (var o = 0; o < 4; ++o) {
-                q.push(byteToUnitValue(pixel[o]));
+                q.push(byteToUnitValue(qPixel[o]));
             }
             attitude.quaternion = new R3.Q(q[0], q[1], q[2], q[3]);
             skip += 2;
         }
         if (pixelsEqual(pixelAt(pixels, 2, xStride), [BYTE_MAX, 0, 0, BYTE_MAX])) {
-            var pixel = pixelAt(pixels, 3, xStride);
+            var ePixel = pixelAt(pixels, 3, xStride);
             for (var e = 0; e < 3; ++e) {
-                var angleFraction = byteToUnitValue(pixel[e]);
+                var angleFraction = byteToUnitValue(ePixel[e]);
                 console.log("Euler", e, angleFraction);
                 attitude.euler.setAt(e, Math.PI * angleFraction);
             }
             attitude.validEuler = true;
 
             for (var row = 0; row < 3; ++row) {
-                pixel = pixelAt(pixels, 4 + row, xStride);
+                var mPixel = pixelAt(pixels, 4 + row, xStride);
                 for (var column = 0; column < 3; ++column) {
-                    attitude.matrix.setAt(row, column, byteToUnitValue(pixel[column]));
+                    attitude.matrix.setAt(row, column, byteToUnitValue(mPixel[column]));
                 }
             }
             skip += 5;
@@ -103,7 +103,7 @@ var IMPROC = (function () {
             height = Math.ceil(DEPTH_HEIGHT * DEPTH_WIDTH / image.width);
             heightOffset = image.height - height;
             depthHeight = DEPTH_HEIGHT;
-            depthWidth = DEPTH_WIDTH
+            depthWidth = DEPTH_WIDTH;
         }
 
         canvas.width = image.width;
