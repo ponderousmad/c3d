@@ -220,7 +220,7 @@ var C3D = (function () {
             for (var e = 0; e < eyes.length; ++e) {
                 var eye = room.viewer.vrEye(eyes[e]),
                     head = new R3.V(p[0], p[1] + this.eyeHeight, p[2] + this.center.z - this.distance),
-                    headOffset = R3.makeRotateQ(room.viewer.orientation).transformV(head);
+                    headOffset = R3.makeRotateQ(room.viewer.orientation).transformP(head);
                 room.viewer.position = R3.addVectors(headOffset, new R3.V(0, 0, 0));
                 room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
                 this.drawMeshes(room);
@@ -229,7 +229,7 @@ var C3D = (function () {
         }
         if (room.viewer.showOnPrimary()) {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-            var offset = R3.makeRotateQ(room.viewer.orientation).transformV(this.center);
+            var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
             room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
@@ -334,7 +334,7 @@ var C3D = (function () {
     };
 
     function calculateVertex(mesh, parameters, x, y, depth) {
-        var pixel = R3.newPoint(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
+        var pixel = new R3.V(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
         pixel.normalize();
         var normal = pixel.copy();
         pixel.scale(depth);
@@ -510,7 +510,7 @@ var C3D = (function () {
             up = transform.transformV(up);
             down = transform.transformV(down);
             for (var p = 0; p < points.length; ++p) {
-                var point = transform.transformV(points[p]),
+                var point = transform.transformP(points[p]),
                     u = uvs[p][0] + uOffsets[a],
                     v = uvs[p][1] + vOffset;
                 mesh.addVertex(point, p == 4 ? up : down, u, v);
