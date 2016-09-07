@@ -25,8 +25,12 @@ var MAIN = (function () {
     }
 
     function setupUpdate(game, canvas) {
+        if (game.canvasInputOnly) {
+            canvas.tabIndex = 1000; // Hack to get canvas to accept keyboard input.
+        }
+
         var pointer = new IO.Pointer(canvas),
-            keyboard = new IO.Keyboard(window, game.consumeKeys),
+            keyboard = new IO.Keyboard(game.canvasInputOnly ? canvas : window, game.consumeKeys),
             lastTime = TICK.now();
 
         return function () {
