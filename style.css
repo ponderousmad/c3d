@@ -7,11 +7,25 @@ html, body {
     overflow-y: hidden;
 }
 
+.slider {
+    display: flex;
+    justify-content: space-between;
+}
+
+.angleSlider {
+    width: 120px;
+    margin-right: 30px;
+}
+
+.angleValue {
+    width: 60px;
+}
+
 .controls {
     position: absolute;
     top: 0px;
     left: 100%;
-    background-color: rgba(255,255,255,0.5);    
+    background-color: rgba(255,255,255,0.5);
     border-radius: 0 0 0 5px;
     padding: 10px;
     
@@ -45,7 +59,7 @@ html, body {
     -moz-transform: translate(-225px,0px);
     -o-transform: translate(-225px,0px);
     -ms-transform: translate(-225px,0px);
-    transform: translate(-225px,0px); 
+    transform: translate(-225px,0px);
 }
 
 .hidden {

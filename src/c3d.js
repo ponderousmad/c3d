@@ -7,6 +7,7 @@ var C3D = (function () {
         this.updateInDraw = true;
         this.updateInterval = null;
         this.consumeKeys = true;
+        this.canvasInputOnly = true;
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
@@ -33,6 +34,13 @@ var C3D = (function () {
         this.turntableCheckbox = document.getElementById("turntable");
         this.stitchCombo = document.getElementById("stitch");
 
+        this.headingSlider = document.getElementById("heading");
+        this.tiltSlider = document.getElementById("tilt");
+        this.twistSlider = document.getElementById("twist");
+        this.headingValue = document.getElementById("headingDeg");
+        this.tiltValue = document.getElementById("tiltDeg");
+        this.twistValue = document.getElementById("twistDeg");
+
         this.batch = new BLIT.Batch("/captures/");
 
         var self = this;
@@ -54,10 +62,43 @@ var C3D = (function () {
             self.stitchMode = self.stitchCombo.value;
             self.showImage(self.lastImage, false);
         });
+
+        this.headingSlider.addEventListener("input", function (e) {
+            self.attitude.euler.z = self.headingSlider.value * R2.DEG_TO_RAD;
+            self.updateAttitudeValues();
+        });
+
+        this.headingValue.addEventListener("change", function (e) {
+            self.headingSlider.value = self.headingValue.value;
+        });
+
+        this.tiltSlider.addEventListener("input", function (e) {
+            self.attitude.euler.x = (self.tiltSlider.value * R2.DEG_TO_RAD) - (Math.PI * 0.5);
+            self.updateAttitudeValues();
+        });
+
+        this.tiltValue.addEventListener("change", function (e) {
+            self.tiltSlider.value = self.tiltValue.value;
+        });
+
+        this.twistSlider.addEventListener("input", function (e) {
+            self.attitude.euler.y = self.twistSlider.value * R2.DEG_TO_RAD;
+            self.updateAttitudeValues();
+        });
+
+        this.twistValue.addEventListener("change", function (e) {
+            self.twistSlider.value = self.twistValue.value;
+        });
     }
 
     View.prototype.setRoom = function (room) {
         this.room = room;
+    };
+
+    View.prototype.updateAttitudeValues = function () {
+        this.headingValue.value = this.headingSlider.value;
+        this.tiltValue.value = this.tiltSlider.value;
+        this.twistValue.value = this.twistSlider.value;
     };
 
     View.prototype.updateFill = function () {
@@ -193,10 +234,10 @@ var C3D = (function () {
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
+        var m = R3.identity();
         if (room.viewer.inVR()) {
             var pose = room.viewer.vrPose(),
                 p = pose.position,
-                m = R3.identity(),
                 pivot = new R3.V(0, 0, -this.eyeHeight);
             room.viewer.orientation.setAll(pose.orientation);
             room.viewer.orientation.w *= -1;
@@ -231,7 +272,7 @@ var C3D = (function () {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
             var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", m);
             this.drawMeshes(room);
         }
     };
@@ -290,6 +331,20 @@ var C3D = (function () {
             bbox.envelope(mesh.bbox);
         }
         this.attitude = scene.attitude;
+
+        if (this.headingSlider) {
+            this.headingSlider.value = this.attitude.euler.z * R2.RAD_TO_DEG;
+        }
+
+        if (this.tiltSlider) {
+            this.tiltSlider.value = (this.attitude.euler.x + Math.PI * 0.5) * R2.RAD_TO_DEG;
+        }
+
+        if (this.twistSlider) {
+            this.twistSlider.value = this.attitude.euler.y * R2.RAD_TO_DEG;
+        }
+        this.updateAttitudeValues();
+
         this.center = bbox.center();
         console.log(bbox);
         this.center.setAt(0, 0);
