@@ -613,7 +613,11 @@ var C3D = (function () {
             image = getQueryParameter(query, "image");
         view.fill = getQueryParameter(query, "fill", "1") == "1";
 
-        MAIN.start(canvas, view);
+        canvas.tabIndex = 1000; // Hack to get canvas to accept keyboard input.
+        view.inputElement = canvas;
+
+        var room = MAIN.start(canvas, view);
+        view.setRoom(room);
 
         // Show the copy icon when dragging over. Seems to only work for chrome.
         canvas.addEventListener("dragover", function(e) {
