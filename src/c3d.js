@@ -220,6 +220,22 @@ var C3D = (function () {
         this.stitchCombo.value = this.stitchMode;
     };
 
+    View.prototype.levelMatrix = function (pivot) {
+        var m = R3.identity();
+        if (this.attitude && this.attitude.validEuler && this.attitude.pitch !== 0) {
+            var heading = this.attitude.euler.z,
+                tilt = this.attitude.euler.x + (Math.PI * 0.5),
+                twist = this.attitude.euler.y;
+            m.translate(R3.toOrigin(pivot));
+            m = R3.matmul(m, R3.makeRotateY(-heading));
+            m = R3.matmul(m, R3.makeRotateZ(   -tilt));
+            m = R3.matmul(m, R3.makeRotateX(   twist));
+            m = R3.matmul(m, R3.makeRotateY( heading));
+            m.translate(pivot);
+        }
+        return m;
+    };
+
     View.prototype.render = function (room, width, height) {
         room.clear(this.clearColor);
         if (this.program === null) {
@@ -234,25 +250,14 @@ var C3D = (function () {
             room.viewer.fov = this.iPadMiniBackCameraFOV;
             room.gl.enable(room.gl.CULL_FACE);
         }
-        var m = R3.identity();
         if (room.viewer.inVR()) {
             var pose = room.viewer.vrPose(),
                 p = pose.position,
-                pivot = new R3.V(0, 0, -this.eyeHeight);
+                pivot = new R3.V(0, 0, -this.eyeHeight),
+                m = this.levelMatrix(pivot);
             room.viewer.orientation.setAll(pose.orientation);
             room.viewer.orientation.w *= -1;
 
-            if (this.attitude && this.attitude.validEuler && this.attitude.pitch !== 0) {
-                var heading = this.attitude.euler.z,
-                    tilt = this.attitude.euler.x + (Math.PI * 0.5),
-                    twist = this.attitude.euler.y;
-                m.translate(R3.toOrigin(pivot));
-                m = R3.matmul(m, R3.makeRotateY(-heading));
-                m = R3.matmul(m, R3.makeRotateZ(   -tilt));
-                m = R3.matmul(m, R3.makeRotateX(   twist));
-                m = R3.matmul(m, R3.makeRotateY( heading));
-                m.translate(pivot);
-            }
             m.translate(R3.toOrigin(pivot));
             m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0)), m);
             m.translate(pivot);
@@ -272,7 +277,7 @@ var C3D = (function () {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
             var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", m);
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", this.levelMatrix(this.center));
             this.drawMeshes(room);
         }
     };
