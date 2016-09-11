@@ -227,10 +227,8 @@ var C3D = (function () {
                 tilt = this.attitude.euler.x + (Math.PI * 0.5),
                 twist = this.attitude.euler.y;
             m.translate(R3.toOrigin(pivot));
-            m = R3.matmul(m, R3.makeRotateY(-heading));
-            m = R3.matmul(m, R3.makeRotateZ(   -tilt));
-            m = R3.matmul(m, R3.makeRotateX(   twist));
-            m = R3.matmul(m, R3.makeRotateY( heading));
+            m = R3.matmul(m, R3.makeRotateZ(-twist));
+            m = R3.matmul(m, R3.makeRotateX( -tilt));
             m.translate(pivot);
         }
         return m;
@@ -277,7 +275,7 @@ var C3D = (function () {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
             var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", this.levelMatrix(this.center));
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
         }
     };
