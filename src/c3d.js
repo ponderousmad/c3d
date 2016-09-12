@@ -63,39 +63,40 @@ var C3D = (function () {
             self.showImage(self.lastImage, false);
         });
 
-        this.headingSlider.addEventListener("input", function (e) {
-            self.attitude.euler.z = self.headingSlider.value * R2.DEG_TO_RAD;
-            self.updateAttitudeValues();
-        });
+        function setupAngle(slider, value, offset) {
+            function handleSlider() {
+                self.attitude.euler.z = slider.value * R2.DEG_TO_RAD + (offset || 0);
+                self.updateAttitudeUI(false);
+            }
+            slider.addEventListener("input", handleSlider);
+            value.addEventListener("change", function (e) {
+                slider.value = value.value;
+                handleSlider();
+            });
+        }
 
-        this.headingValue.addEventListener("change", function (e) {
-            self.headingSlider.value = self.headingValue.value;
-        });
-
-        this.tiltSlider.addEventListener("input", function (e) {
-            self.attitude.euler.x = (self.tiltSlider.value * R2.DEG_TO_RAD) - (Math.PI * 0.5);
-            self.updateAttitudeValues();
-        });
-
-        this.tiltValue.addEventListener("change", function (e) {
-            self.tiltSlider.value = self.tiltValue.value;
-        });
-
-        this.twistSlider.addEventListener("input", function (e) {
-            self.attitude.euler.y = self.twistSlider.value * R2.DEG_TO_RAD;
-            self.updateAttitudeValues();
-        });
-
-        this.twistValue.addEventListener("change", function (e) {
-            self.twistSlider.value = self.twistValue.value;
-        });
+        setupAngle(this.headingSlider, this.headingValue);
+        setupAngle(this.tiltSlider, this.tiltValue, -Math.PI * 0.5);
+        setupAngle(this.twistSlider, this.twistValue);
     }
 
     View.prototype.setRoom = function (room) {
         this.room = room;
     };
 
-    View.prototype.updateAttitudeValues = function () {
+    View.prototype.updateAttitudeUI = function (updateSliders) {
+        if (!this.headingSlider || !this.tiltSlider || !this.twistSlider) {
+            return;
+        }
+        if (updateSliders) {
+            this.headingSlider.value = this.attitude.euler.z * R2.RAD_TO_DEG;
+            this.tiltSlider.value = (this.attitude.euler.x + Math.PI * 0.5) * R2.RAD_TO_DEG;
+            this.twistSlider.value = this.attitude.euler.y * R2.RAD_TO_DEG;
+        }
+
+        if (!this.headingValue || !this.tiltValue || !this.twistValue) {
+            return;
+        }
         this.headingValue.value = this.headingSlider.value;
         this.tiltValue.value = this.tiltSlider.value;
         this.twistValue.value = this.twistSlider.value;
@@ -220,15 +221,26 @@ var C3D = (function () {
         this.stitchCombo.value = this.stitchMode;
     };
 
-    View.prototype.levelMatrix = function (pivot) {
+    View.prototype.levelMatrix = function (pivot, inverse, useHeading) {
         var m = R3.identity();
         if (this.attitude && this.attitude.validEuler && this.attitude.pitch !== 0) {
             var heading = this.attitude.euler.z,
                 tilt = this.attitude.euler.x + (Math.PI * 0.5),
                 twist = this.attitude.euler.y;
             m.translate(R3.toOrigin(pivot));
-            m = R3.matmul(m, R3.makeRotateZ(-twist));
-            m = R3.matmul(m, R3.makeRotateX( -tilt));
+            if (inverse) {
+                m = R3.matmul(m, R3.makeRotateX(tilt));
+                m = R3.matmul(m, R3.makeRotateZ(twist));
+                if (useHeading) {
+                    m = R3.matmul(m, R3.makeRotateY(-heading));
+                }
+            } else {
+                if (useHeading) {
+                    m = R3.matmul(m, R3.makeRotateY(-heading));
+                }
+                m = R3.matmul(m, R3.makeRotateZ(-twist));
+                m = R3.matmul(m, R3.makeRotateX( -tilt));
+            }
             m.translate(pivot);
         }
         return m;
@@ -335,18 +347,7 @@ var C3D = (function () {
         }
         this.attitude = scene.attitude;
 
-        if (this.headingSlider) {
-            this.headingSlider.value = this.attitude.euler.z * R2.RAD_TO_DEG;
-        }
-
-        if (this.tiltSlider) {
-            this.tiltSlider.value = (this.attitude.euler.x + Math.PI * 0.5) * R2.RAD_TO_DEG;
-        }
-
-        if (this.twistSlider) {
-            this.twistSlider.value = this.attitude.euler.y * R2.RAD_TO_DEG;
-        }
-        this.updateAttitudeValues();
+        this.updateAttitudeUI(true);
 
         this.center = bbox.center();
         console.log(bbox);
@@ -423,7 +424,7 @@ var C3D = (function () {
                 xOffset: - width / 2,
                 yOffset: height / 2,
                 depthScale: depthScale,
-                uScale: scene.uMax / scene.width,
+                uScale: scene.uMax / width,
                 vScale: scene.vMax / height,
                 planeDistance: scene.width / (2.0 * Math.tan(pixelFOV)),
                 pixelScale: scene.width * 0.5
@@ -508,10 +509,6 @@ var C3D = (function () {
 
     View.prototype.constructCompass = function () {
         var mesh = new WGL.Mesh(),
-            heading = this.attitude.euler.z,
-            tilt = this.attitude.euler.x + (Math.PI * 0.5),
-            twist = this.attitude.euler.y,
-            attitudeM = R3.matmul(R3.makeRotateY(-heading), R3.makeRotateZ(-tilt)),
             up = new R3.V(0, 1,  0),
             down = new R3.V(0, -1, 0),
             points = [
@@ -543,27 +540,10 @@ var C3D = (function () {
                 new R3.Q(),
                 R3.angleAxisQ(-Math.PI * 0.5, new R3.V(1, 0, 0))
             ],
-            orders = ["XYZ", "ZYX", "YXZ", "ZXY", "YZX", "XZY"];
-
-        console.log(
-            "Heading:", heading * R2.RAD_TO_DEG,
-            "Tilt:", tilt * R2.RAD_TO_DEG,
-            "Twist:", twist * R2.RAD_TO_DEG
-        );
-
-        for (var o = 0; o < orders.length; ++o) {
-            var order = orders[o],
-                fromQuaternion = R3.qToEuler(this.attitude.quaternion, order);
-
-            console.log(
-                order + " QHeading:", fromQuaternion.z * R2.RAD_TO_DEG,
-                "QTilt:", (fromQuaternion.x + (Math.PI * 0.5)) * R2.RAD_TO_DEG,
-                "QTwist:", fromQuaternion.y * R2.RAD_TO_DEG
-            );
-        }
+            level = this.levelMatrix(R3.origin(), true, true);
 
         for (var a = 0; a < axes.length; ++a) {
-            var transform = R3.matmul(attitudeM, R3.makeRotateQ(axes[a]));
+            var transform = R3.matmul(level, R3.makeRotateQ(axes[a]));
 
             up = transform.transformV(up);
             down = transform.transformV(down);

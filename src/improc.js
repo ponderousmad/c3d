@@ -55,7 +55,7 @@ var IMPROC = (function () {
             var ePixel = pixelAt(pixels, 3, xStride);
             for (var e = 0; e < 3; ++e) {
                 var angleFraction = byteToUnitValue(ePixel[e]);
-                console.log("Euler", e, angleFraction);
+                console.log("Euler", e, angleFraction, angleFraction * 180);
                 attitude.euler.setAt(e, Math.PI * angleFraction);
             }
             attitude.validEuler = true;
