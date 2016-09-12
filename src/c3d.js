@@ -393,12 +393,12 @@ var C3D = (function () {
     };
 
     function calculateVertex(mesh, parameters, x, y, depth) {
-        var pixel = new R3.V(parameters.xOffset + x, parameters.yOffset - y, -parameters.planeDistance);
-        pixel.normalize();
-        var normal = pixel.copy();
-        pixel.scale(depth);
-        pixel.x *= parameters.pixelScale;
-        pixel.y *= parameters.pixelScale;
+        var pixel = new R3.V(
+            depth * (parameters.xOffset + x) / parameters.xFactor,
+            depth * (parameters.yOffset - y) / parameters.yFactor,
+            -depth
+        );
+        var normal = pixel.normalized();
         mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
     }
 
@@ -420,14 +420,18 @@ var C3D = (function () {
             indexStride = stitch == "simple" ? rowIndexWidth : 2,
             depthScale = 1,
             pixelFOV = this.iPadMiniBackCameraFOV * R2.DEG_TO_RAD / scene.width,
+
             parameters = {
-                xOffset: - width / 2,
-                yOffset: height / 2,
-                depthScale: depthScale,
+                // Following is from http://forums.structure.io/t/getting-colored-point-cloud-data-from-aligned-frames/4094
+                // Assume the following intrinsics, from the Structure SDK docs
+                // K_RGB_QVGA       = [305.73, 0, 159.69; 0, 305.62, 119.86; 0, 0, 1]
+                // Since those numbers are for 320x240, just multiply by 2.
+                xOffset:-159.69 * 2,
+                yOffset: 119.86 * 2,
+                xFactor: 305.73 * 2,
+                yFactor: 305.62 * 2,
                 uScale: scene.uMax / width,
-                vScale: scene.vMax / height,
-                planeDistance: scene.width / (2.0 * Math.tan(pixelFOV)),
-                pixelScale: scene.width * 0.5
+                vScale: scene.vMax / height
             },
             MAX_INDEX = Math.pow(2, 16),
             SMART_STITCH_MAX_DIFFERENCE = 0.15,
