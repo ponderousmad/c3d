@@ -1,6 +1,7 @@
 var R3 = (function () {
     var D3 = 3,
-        D4 = 4;
+        D4 = 4,
+        TOLERANCE = 1e-6;
 
     function at(row, column) {
         return row * D4 + column;
@@ -60,6 +61,10 @@ var R3 = (function () {
         this.x *= s;
         this.y *= s;
         this.z *= s;
+    };
+
+    V.prototype.scaled = function (s) {
+        return new V(this.x * s, this.y * s, this.z * s);
     };
 
     V.prototype.add = function (v) {
@@ -252,6 +257,18 @@ var R3 = (function () {
         }
     };
 
+    M.prototype.equals = function (other, tolerance) {
+        tolerance = tolerance || TOLERANCE;
+        for (var r = 0; r < D4; ++r) {
+            for (var c = 0; c < D4; ++c) {
+                if (Math.abs(this.at(r, c) - other.at(r, c)) > tolerance) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
     M.prototype.translate = function (v) {
         this.m[at(3, 0)] += v.x;
         this.m[at(3, 1)] += v.y;
@@ -277,7 +294,7 @@ var R3 = (function () {
             xScale = x.length(),
             yScale = y.length(),
             zScale = z.length();
-        tolerance = tolerance || 1e-5;
+        tolerance = tolerance || TOLERANCE;
 
         if (Math.abs(yScale - xScale) > tolerance) {
             return false;
@@ -304,12 +321,13 @@ var R3 = (function () {
 
     // Adapted from setFromRotationMatrix in
     // https://github.com/mrdoob/three.js/blob/dev/src/math/Euler.js
-    M.prototype.extractEuler = function (order) {
+    M.prototype.extractEuler = function (order, tolerance) {
         var x = 0.0, y = 0.0, z = 0.0;
+        tolerance = tolerance || TOLERANCE;
         if (order === "XYZ" || !order) {
             var m20 = this.m[at(2, 0)];
             y = Math.asin(clamp(m20, -1, 1));
-            if (Math.abs(m20) < 0.9999) {
+            if ((1 - Math.abs(m20)) > tolerance) {
                 x = Math.atan2(-this.m[at(2, 1)], this.m[at(2, 2)]);
                 z = Math.atan2(-this.m[at(1, 0)], this.m[at(0, 0)]);
             } else {
@@ -318,7 +336,7 @@ var R3 = (function () {
         } else if (order === "ZYX") {
             var m02 = this.m[at(0, 2)];
             y = Math.asin(-clamp(m02, - 1, 1));
-            if (Math.abs(m02) < 0.99999 ) {
+            if ((1 - Math.abs(m02)) > tolerance) {
                 x = Math.atan2( this.m[at(1, 2)], this.m[at(2, 2)]);
                 z = Math.atan2( this.m[at(0, 1)], this.m[at(0, 0)]);
             } else {
@@ -327,7 +345,7 @@ var R3 = (function () {
         } else if (order === "YXZ") {
             var m21 = this.m[at(2, 1)];
             x = Math.asin(-clamp(m21, -1, 1));
-            if (Math.abs(m21) < 0.99999) {
+            if ((1 - Math.abs(m21)) > tolerance) {
                 y = Math.atan2( this.m[at(2, 0)], this.m[at(2, 2)]);
                 z = Math.atan2( this.m[at(0, 1)], this.m[at(1, 1)]);
             } else {
@@ -336,7 +354,7 @@ var R3 = (function () {
         } else if (order === "ZXY") {
             var m12 = this.m[at(1, 2)];
             x = Math.asin(clamp(m12, -1, 1));
-            if (Math.abs(m12) < 0.99999) {
+            if ((1 - Math.abs(m12)) > tolerance) {
                 y = Math.atan2(-this.m[at(0, 2)], this.m[at(2, 2)]);
                 z = Math.atan2(-this.m[at(1, 0)], this.m[at(1, 1)]);
             } else {
@@ -345,7 +363,7 @@ var R3 = (function () {
         } else if (order === "YZX") {
             var m01 = this.m[at(0, 1)];
             z = Math.asin(clamp(m01, -1, 1));
-            if (Math.abs(m01) < 0.99999) {
+            if ((1 - Math.abs(m01)) > tolerance) {
                 x = Math.atan2(-this.m[at(2, 1)], this.m[at(1, 1)]);
                 y = Math.atan2(-this.m[at(0, 2)], this.m[at(0, 0)]);
             } else {
@@ -354,7 +372,7 @@ var R3 = (function () {
         } else if (order === "XZY") {
             var m10 = this.m[at(1, 0)];
             z = Math.asin(-clamp(m10, -1, 1));
-            if (Math.abs(m10) < 0.99999) {
+            if ((1 - Math.abs(m10)) > tolerance) {
                 x = Math.atan2( this.m[at(1, 2)], this.m[at(1, 1)]);
                 y = Math.atan2( this.m[at(2, 0)], this.m[at(0, 0)]);
             } else {
@@ -385,17 +403,21 @@ var R3 = (function () {
         // https://en.wikipedia.org/wiki/Minor_(linear_algebra)
         // Calculate the Minor, which is the determinant of the matrix
         // obtained by ommiting the specified row and column
-        c = c || 0; // Arbitrarily choosen column for calculating the determinant.
+        c = c || 0; // Arbitrarily choosen column for calculating the determinant from [0,D3)
         var det = 0,
             cA = skipIndex(column, c + 0),
             cB = skipIndex(column, c + 1),
-            cC = skipIndex(column, c + 2);
+            cC = skipIndex(column, c + 2),
+            c0 = Math.min(cB, cC),
+            c1 = Math.max(cB, cC);
         for (var r = 0; r < D3; ++r) {
             var rA = skipIndex(row, r + 0),
                 rB = skipIndex(row, r + 1),
-                rC = skipIndex(row, r + 2);
-                det2x2 = this.m[at(rB, cB)] * this.m[at(rC, cC)] -
-                         this.m[at(rC, cB)] * this.m[at(rB, cC)];
+                rC = skipIndex(row, r + 2),
+                r0 = Math.min(rB, rC),
+                r1 = Math.max(rB, rC);
+                det2x2 = this.m[at(r0, c0)] * this.m[at(r1, c1)] -
+                         this.m[at(r1, c0)] * this.m[at(r0, c1)];
             det += this.m[at(rA, cA)] * Math.pow(-1, c + r) * det2x2;
         }
         return det;
@@ -414,8 +436,8 @@ var R3 = (function () {
 
         for (var c = 0; c < D4; ++c) {
             for (var r = 0; r < D4; ++r) {
-                var adjuct = this.minor(r, c);
-                inv.m[at(r, c)] = Math.pow(-1, r + c) * adjuct * scale;
+                var cofactor = Math.pow(-1, r + c) * this.minor(c, r);
+                inv.m[at(r, c)] = cofactor * scale;
             }
         }
         return inv;
@@ -660,7 +682,6 @@ var R3 = (function () {
                 TEST.equals(v.z, z);
             }
         }
-        var TOLERANCE = 1e-6;
 
         var vectorTests = [
             function testConstruct() {
@@ -797,13 +818,24 @@ var R3 = (function () {
 
         var matrixTests = [
             function testConstruct() {
-                var m = new M();
+                var m = new M(),
+                    c = 0, r = 0;
 
-                for (var c = 0; c < D4; ++c) {
-                    for (var r = 0; r < D4; ++r) {
+                for (c = 0; c < D4; ++c) {
+                    for (r = 0; r < D4; ++r) {
                         TEST.equals(m.at(r, c), r == c ? 1 : 0);
                     }
                 }
+
+                var indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                    a = new M(indices);
+                for (c = 0; c < D4; ++c) {
+                    for (r = 0; r < D4; ++r) {
+                        TEST.equals(a.at(r, c), at(r, c));
+                    }
+                }
+                m.setAll(indices);
+                TEST.isTrue(a.equals(m));
             },
 
             function testTranslate() {
@@ -883,6 +915,32 @@ var R3 = (function () {
                 testEqualsV(tt.transformP(v), 16, 7, -6, TOLERANCE);
                 testEqualsV(tt.transformV(v), 1, 1, 1, TOLERANCE);
                 testEqualsV(new V(15, 6, -7), tt.at(3, 0), tt.at(3, 1), tt.at(3, 2));
+            },
+
+            function testDeterminant() {
+                var v = new V(1, -2, 3),
+                    a = Math.PI / 2,
+                    q = eulerToQ(a, 0, -Math.PI / 3),
+                    s = 5;
+
+                TEST.equals(new M().determinant(), 1);
+                TEST.equals(makeTranslate(v).determinant(), 1);
+                TEST.tolEquals(makeRotateX(a).determinant(), 1, TOLERANCE);
+                TEST.tolEquals(makeRotateQ(q).determinant(), 1, TOLERANCE);
+                TEST.tolEquals(makeScale(s).determinant(), s * s * s, TOLERANCE);
+            },
+
+            function testInverse() {
+                var v = new V(1, -2, 3),
+                    a = Math.PI / 2,
+                    q = eulerToQ(a, 0, -Math.PI / 3),
+                    s = 5;
+
+                TEST.isTrue(new M().inverse().equals(new M()));
+                TEST.isTrue(makeTranslate(v).inverse().equals(makeTranslate(v.scaled(-1))));
+                TEST.isTrue(makeRotateX(a).inverse().equals(makeRotateX(-a)));
+                TEST.isTrue(makeRotateQ(q).inverse().equals(makeRotateQ(q.inverse())));
+                TEST.isTrue(makeScale(s).inverse().equals(makeScale(1 / s)));
             }
         ];
 
@@ -942,7 +1000,7 @@ var R3 = (function () {
         AABox: AABox,
         identity: function () { return new M(); },
         origin: function () { return new V(); },
-        toOrigin: function (v) { var o = new V(); o.sub(v); return o; },
+        toOrigin: function (v) { return v.scaled(-1); },
         zeroQ: function () { return new Q(0, 0, 0, 1); },
         makeTranslate: makeTranslate,
         makeScale: makeScale,
