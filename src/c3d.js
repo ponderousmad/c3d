@@ -261,27 +261,24 @@ var C3D = (function () {
             room.gl.enable(room.gl.CULL_FACE);
         }
         if (room.viewer.inVR()) {
-            var pose = room.viewer.vrPose(),
-                p = pose.position,
-                pivot = new R3.V(0, 0, -this.eyeHeight),
+            var vrFrame = room.viewer.vrFrame(),
+                pivot = new R3.V(0, 0, this.eyeHeight),
                 m = this.levelMatrix(pivot);
-            room.viewer.orientation.setAll(pose.orientation);
-            room.viewer.orientation.w *= -1;
+            room.viewer.orientation.set(0, 0, 0, 1);
+            room.viewer.position.set(0, 0, 0);
 
             m.translate(R3.toOrigin(pivot));
             m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0)), m);
-            m.translate(pivot);
+            m.translate(new R3.V(0, 0, this.distance - this.center.z));
 
-            var eyes = ["left", "right"];
+            var eyes = ["left", "right"],
+                views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix];
             for (var e = 0; e < eyes.length; ++e) {
-                var eye = room.viewer.vrEye(eyes[e]),
-                    head = new R3.V(p[0], p[1] + this.eyeHeight, p[2] + this.center.z - this.distance),
-                    headOffset = R3.makeRotateQ(room.viewer.orientation).transformP(head);
-                room.viewer.position = R3.addVectors(headOffset, new R3.V(0, 0, 0));
-                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", m, eye);
+                var viewMatrix = R3.matmul(new R3.M(views[e]), m);
+                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", viewMatrix, vrFrame);
                 this.drawMeshes(room);
             }
-            room.viewer.submitVR(pose);
+            room.viewer.submitVR();
         }
         if (room.viewer.showOnPrimary()) {
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
