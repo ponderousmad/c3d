@@ -68,6 +68,7 @@ var WGL = (function () {
         this.vrDisplay = null;
         this.size = new R2.V(0, 0);
         this.safeSize = new R2.V(0, 0);
+        this.vrFrame = new VRFrameData();
     }
 
     Viewer.prototype.setVRDisplay = function (vrDisplay) {
@@ -141,7 +142,10 @@ var WGL = (function () {
     };
 
     Viewer.prototype.vrPose = function () {
-        return this.vrDisplay.getPose();
+        if (this.vrDisplay.getFrameData(this.vrFrame)) {
+            return this.vrFrame.pose;
+        }
+        return null;
     };
 
     Viewer.prototype.vrEye = function (eye) {
