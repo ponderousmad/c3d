@@ -68,11 +68,12 @@ var WGL = (function () {
         this.vrDisplay = null;
         this.size = new R2.V(0, 0);
         this.safeSize = new R2.V(0, 0);
-        this.vrFrameData = new VRFrameData();
+        this.vrFrameData = null;
     }
 
     Viewer.prototype.setVRDisplay = function (vrDisplay) {
         this.vrDisplay = vrDisplay;
+        this.vrFrameData = new VRFrameData();
     };
 
     Viewer.prototype.inVR = function () {
@@ -139,7 +140,7 @@ var WGL = (function () {
     };
 
     Viewer.prototype.vrFrame = function () {
-        if (this.vrDisplay.getFrameData(this.vrFrameData)) {
+        if (this.vrDisplay && this.vrDisplay.getFrameData(this.vrFrameData)) {
             return this.vrFrameData;
         }
         return null;
