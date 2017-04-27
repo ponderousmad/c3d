@@ -169,7 +169,7 @@ var C3D = (function () {
             rate = 0.0001;
 
         if (pointer.wheelY) {
-            var WHEEL_BASE = 1000;
+            var WHEEL_BASE = 20;
             this.distance *= (WHEEL_BASE + pointer.wheelY) / WHEEL_BASE;
         }
 
